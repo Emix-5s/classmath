@@ -8,6 +8,13 @@
       "when": 1790025089251,
       "tag": "0000_create_clubhouse_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790025141633,
+      "tag": "0001_message_profile_fk",
+      "breakpoints": true
     }
   ]
 }
