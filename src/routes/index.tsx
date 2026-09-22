@@ -1,9 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/useAuth";
+import { useGuest } from "@/lib/guest";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
 
 export const Route = createFileRoute("/")({
@@ -40,18 +40,16 @@ type ProfileRow = {
 };
 
 function Clubhouse() {
-  const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user, loading } = useAuth();
+  const { guest, loading, join, leave } = useGuest();
+  const user = guest;
+  const [handle, setHandle] = useState("");
+  const [joining, setJoining] = useState(false);
   const [roomSlug, setRoomSlug] = useState("general");
   const [draft, setDraft] = useState("");
   const [modTarget, setModTarget] = useState<{ id: string; username: string } | null>(null);
   const [flipBet, setFlipBet] = useState(50);
   const scroller = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
-  }, [loading, user, navigate]);
 
   const profile = useQuery({
     queryKey: ["profile", user?.id],
@@ -144,7 +142,10 @@ function Clubhouse() {
     queryKey: ["inventory", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("inventory").select("item_id");
+      const { data, error } = await supabase
+        .from("inventory")
+        .select("item_id")
+        .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []).map((r) => r.item_id);
     },
@@ -156,7 +157,7 @@ function Clubhouse() {
     queryFn: async () => {
       const [all, mine] = await Promise.all([
         supabase.from("achievements").select("*").order("sort_order"),
-        supabase.from("user_achievements").select("*"),
+        supabase.from("user_achievements").select("*").eq("user_id", user!.id),
       ]);
       if (all.error) throw all.error;
       if (mine.error) throw mine.error;
@@ -189,7 +190,12 @@ function Clubhouse() {
   }
 
   async function playFlip(guess: "heads" | "tails") {
-    const { data, error } = await supabase.rpc("play_coin_flip", { bet: flipBet, guess });
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_coin_flip", {
+      _user: user.id,
+      bet: flipBet,
+      guess,
+    });
     if (error) {
       toast.error(error.message);
       return;
@@ -202,7 +208,8 @@ function Clubhouse() {
   }
 
   async function claimDaily() {
-    const { data, error } = await supabase.rpc("claim_daily");
+    if (!user) return;
+    const { data, error } = await supabase.rpc("claim_daily", { _user: user.id });
     if (error) {
       toast.error(error.message);
       return;
@@ -213,7 +220,8 @@ function Clubhouse() {
   }
 
   async function buy(itemId: string) {
-    const { error } = await supabase.rpc("buy_item", { _item: itemId });
+    if (!user) return;
+    const { error } = await supabase.rpc("buy_item", { _user: user.id, _item: itemId });
     if (error) {
       toast.error(error.message);
       return;
@@ -223,7 +231,11 @@ function Clubhouse() {
   }
 
   async function claimAchievement(id: string) {
-    const { error } = await supabase.rpc("claim_achievement", { _achievement: id });
+    if (!user) return;
+    const { error } = await supabase.rpc("claim_achievement", {
+      _user: user.id,
+      _achievement: id,
+    });
     if (error) {
       toast.error(error.message);
       return;
@@ -233,11 +245,13 @@ function Clubhouse() {
   }
 
   async function modAct(action: "mute" | "unmute" | "ban" | "unban") {
+    if (!user) return;
     if (!modTarget) {
       toast.error("Tap a name in chat to pick someone first");
       return;
     }
     const { error } = await supabase.rpc("mod_action", {
+      _actor: user.id,
       _target: modTarget.id,
       _action: action,
       _minutes: 10,
@@ -247,6 +261,67 @@ function Clubhouse() {
       return;
     }
     toast.success(`${modTarget.username} — ${action}d`);
+  }
+
+  async function becomeMod() {
+    if (!user) return;
+    const code = window.prompt("Enter the moderator code");
+    if (!code) return;
+    const { error } = await supabase.rpc("claim_mod", { _user: user.id, _code: code });
+    if (error) {
+      toast.error("That code isn't right");
+      return;
+    }
+    toast.success("Moderator powers unlocked");
+    qc.invalidateQueries({ queryKey: ["is-mod"] });
+  }
+
+  if (!loading && !user) {
+    return (
+      <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background px-4 text-foreground">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-40 -left-32 size-[520px] rounded-full bg-accent/20 blur-[120px]" />
+          <div className="absolute bottom-[-160px] left-1/3 size-[420px] rounded-full bg-coin/10 blur-[120px]" />
+        </div>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setJoining(true);
+            try {
+              await join(handle);
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Try another handle");
+            } finally {
+              setJoining(false);
+            }
+          }}
+          className="rise glass relative w-full max-w-sm rounded-2xl p-6"
+        >
+          <div className="font-display text-xl font-bold tracking-tight">Nexus Clubhouse</div>
+          <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-mist">
+            pick a handle to enter
+          </p>
+          <input
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="Handle (e.g. astra)"
+            required
+            maxLength={20}
+            className="mt-5 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
+          />
+          <button
+            type="submit"
+            disabled={joining}
+            className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 font-display text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            Enter the clubhouse
+          </button>
+          <p className="mt-3 font-mono text-[10px] text-mist">
+            No password — your handle is saved on this device.
+          </p>
+        </form>
+      </div>
+    );
   }
 
   const p = profile.data;
