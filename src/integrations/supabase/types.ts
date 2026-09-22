@@ -300,10 +300,41 @@ export type Database = {
         Args: { _amount: number; _key: string; _user: string }
         Returns: undefined
       }
-      buy_item: { Args: { _item: string }; Returns: Json }
-      claim_achievement: { Args: { _achievement: string }; Returns: Json }
-      claim_daily: { Args: never; Returns: Json }
-      delete_message: { Args: { _message: string }; Returns: undefined }
+      buy_item: { Args: { _item: string; _user: string }; Returns: Json }
+      claim_achievement: {
+        Args: { _achievement: string; _user: string }
+        Returns: Json
+      }
+      claim_daily: { Args: { _user: string }; Returns: Json }
+      claim_mod: { Args: { _code: string; _user: string }; Returns: undefined }
+      create_guest: {
+        Args: { _username: string }
+        Returns: {
+          banned: boolean
+          coins: number
+          created_at: string
+          font_key: string
+          id: string
+          last_claim_at: string | null
+          level: number
+          muted_until: string | null
+          name_color: string
+          streak: number
+          username: string
+          vip_tier: string | null
+          xp: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      delete_message: {
+        Args: { _actor: string; _message: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -312,10 +343,18 @@ export type Database = {
         Returns: boolean
       }
       mod_action: {
-        Args: { _action: string; _minutes?: number; _target: string }
+        Args: {
+          _action: string
+          _actor: string
+          _minutes?: number
+          _target: string
+        }
         Returns: undefined
       }
-      play_coin_flip: { Args: { bet: number; guess: string }; Returns: Json }
+      play_coin_flip: {
+        Args: { _user: string; bet: number; guess: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "mod" | "user"
