@@ -15,6 +15,13 @@
       "when": 1790025141633,
       "tag": "0001_message_profile_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790077000373,
+      "tag": "0002_guest_username_only",
+      "breakpoints": true
     }
   ]
 }
