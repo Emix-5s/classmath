@@ -366,13 +366,18 @@ function Clubhouse() {
               </span>
               <span className="font-display text-sm font-bold">{p?.level ?? 1}</span>
             </div>
+            {!isMod.data && (
+              <button
+                onClick={becomeMod}
+                className="rounded-full bg-mod/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-mod ring-1 ring-mod/30 transition-colors hover:bg-mod/20"
+              >
+                mod code
+              </button>
+            )}
             <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                navigate({ to: "/auth" });
-              }}
+              onClick={leave}
               className="grid size-9 place-items-center rounded-full bg-panel2 font-display text-sm font-bold ring-1 ring-white/10 transition-colors hover:bg-white/10"
-              title="Sign out"
+              title="Leave and pick a new handle"
             >
               {(p?.username ?? "?").charAt(0).toUpperCase()}
             </button>
@@ -500,6 +505,7 @@ function Clubhouse() {
                           <button
                             onClick={async () => {
                               const { error } = await supabase.rpc("delete_message", {
+                                _actor: user!.id,
                                 _message: m.id,
                               });
                               if (error) toast.error(error.message);
