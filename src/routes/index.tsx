@@ -364,9 +364,10 @@ function Clubhouse() {
             e.preventDefault();
             setJoining(true);
             try {
-              await join(handle);
+              if (mode === "up") await signUp(handle, password);
+              else await signIn(handle, password);
             } catch (err) {
-              toast.error(err instanceof Error ? err.message : "Try another handle");
+              toast.error(err instanceof Error ? err.message : "Something went wrong");
             } finally {
               setJoining(false);
             }
@@ -375,25 +376,50 @@ function Clubhouse() {
         >
           <div className="font-display text-xl font-bold tracking-tight">Nexus Clubhouse</div>
           <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-mist">
-            pick a handle to enter
+            {mode === "up" ? "create your account" : "welcome back"}
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-white/[0.04] p-1 ring-1 ring-white/10">
+            {(["in", "up"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`rounded-lg px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                  mode === m ? "bg-accent/15 text-accent" : "text-mist hover:text-foreground"
+                }`}
+              >
+                {m === "in" ? "sign in" : "sign up"}
+              </button>
+            ))}
+          </div>
           <input
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            placeholder="Handle (e.g. astra)"
+            placeholder="Username"
+            autoComplete="username"
             required
             maxLength={20}
-            className="mt-5 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
+            className="mt-3 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
+          />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            placeholder="Password"
+            autoComplete={mode === "up" ? "new-password" : "current-password"}
+            required
+            minLength={4}
+            className="mt-2 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
           />
           <button
             type="submit"
             disabled={joining}
             className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 font-display text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            Enter the clubhouse
+            {mode === "up" ? "Create account" : "Enter the clubhouse"}
           </button>
           <p className="mt-3 font-mono text-[10px] text-mist">
-            No password — your handle is saved on this device.
+            Username and password only — no email needed.
           </p>
         </form>
       </div>
