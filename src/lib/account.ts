@@ -59,15 +59,11 @@ export function useAccount() {
   return { account, loading, signUp, signIn, signOut };
 }
 
-type VipPerk = { mult: number; maxBet: number };
-
-export const VIP_PERKS = {
+export const VIP_PERKS: Record<string, { mult: number; maxBet: number }> = {
   none: { mult: 1, maxBet: 500 },
   VIP: { mult: 1.25, maxBet: 1500 },
   "VIP+": { mult: 1.5, maxBet: 5000 },
-} as const satisfies Record<string, VipPerk>;
+};
 
-export const perksFor = (tier: string | null | undefined): VipPerk =>
-  (tier && tier in VIP_PERKS
-    ? VIP_PERKS[tier as keyof typeof VIP_PERKS]
-    : VIP_PERKS.none);
+export const perksFor = (tier: string | null | undefined) =>
+  VIP_PERKS[tier ?? "none"] ?? VIP_PERKS.none;
