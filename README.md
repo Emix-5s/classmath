@@ -1,8 +1,5 @@
 # Cozy Corner Chat
 
-make a website where i can chat with people, have a shop with skins, cool fonts, vip, etc 
-(To earn coin add games, achievements, etc) and a mod rank
-
 This project was built with [Lovable](https://lovable.dev).
 
 **Live app**: https://classmath.lovable.app
