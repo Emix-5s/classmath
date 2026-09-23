@@ -477,9 +477,9 @@ function Clubhouse() {
               </button>
             )}
             <button
-              onClick={leave}
+              onClick={signOut}
               className="grid size-9 place-items-center rounded-full bg-panel2 font-display text-sm font-bold ring-1 ring-white/10 transition-colors hover:bg-white/10"
-              title="Leave and pick a new handle"
+              title="Sign out"
             >
               {(p?.username ?? "?").charAt(0).toUpperCase()}
             </button>
@@ -683,44 +683,128 @@ function Clubhouse() {
               </div>
             </div>
 
-            {/* earn coins */}
-            <div className="glass rounded-2xl p-4">
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
-                Earn coins
+            {/* vip perks */}
+            <div className="rounded-2xl border border-vip/20 bg-vip/[0.06] p-4 backdrop-blur-xl">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                  VIP perks
+                </span>
+                <span className="shimmer rounded-full bg-vip/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-vip">
+                  {p?.vip_tier ?? "no tier"}
+                </span>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-8 place-items-center rounded-lg bg-coin/15 font-display text-xs font-bold text-coin">
-                    ◈
+              <ul className="space-y-1 font-mono text-[10px] text-mist">
+                <li>
+                  winnings ×{perksFor(p?.vip_tier).mult} on every game
+                </li>
+                <li>max bet ◈ {formatCoins(perksFor(p?.vip_tier).maxBet)}</li>
+                <li>glowing VIP badge beside your name in chat</li>
+                <li>{p?.vip_tier ? "priority in mod-desk requests" : "buy VIP in the shop to unlock"}</li>
+              </ul>
+            </div>
+
+            {/* arcade */}
+            <div className="glass rounded-2xl p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                  Arcade
+                </span>
+                <span className="font-mono text-[10px] text-coin">bet ◈ {flipBet}</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={perksFor(p?.vip_tier).maxBet}
+                step={10}
+                value={Math.min(flipBet, perksFor(p?.vip_tier).maxBet)}
+                onChange={(e) => setFlipBet(Number(e.target.value))}
+                className="w-full accent-coin"
+              />
+
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Coin Flip · 2x</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => playFlip("heads")}
+                      className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    >
+                      Heads
+                    </button>
+                    <button
+                      onClick={() => playFlip("tails")}
+                      className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    >
+                      Tails
+                    </button>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">Coin Flip</div>
-                    <div className="font-mono text-[10px] text-mist">bet ◈ {flipBet}</div>
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Dice Roll · 5x</div>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setDicePick(n)}
+                        className={`flex-1 rounded-lg py-1.5 font-mono text-xs transition-colors ${
+                          dicePick === n
+                            ? "bg-accent/15 text-accent ring-1 ring-accent/40"
+                            : "bg-white/[0.04] text-mist hover:bg-white/10"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
                   </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={500}
-                    step={10}
-                    value={flipBet}
-                    onChange={(e) => setFlipBet(Number(e.target.value))}
-                    className="w-16 accent-coin"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => playFlip("heads")}
-                    className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    onClick={playDice}
+                    className="mt-2 w-full rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
                   >
-                    Heads
-                  </button>
-                  <button
-                    onClick={() => playFlip("tails")}
-                    className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
-                  >
-                    Tails
+                    Roll the dice
                   </button>
                 </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Neon Slots · up to 12x</div>
+                  <button
+                    onClick={playSlots}
+                    className="w-full rounded-lg bg-coin/15 px-3 py-2 text-xs font-medium text-coin transition-colors hover:bg-coin/25"
+                  >
+                    ◈ ★ ☾ spin
+                  </button>
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Rock Paper Scissors · 2x</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["rock", "paper", "scissors"] as const).map((pick) => (
+                      <button
+                        key={pick}
+                        onClick={() => playRps(pick)}
+                        className="rounded-lg bg-white/[0.04] px-2 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        {pick}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Hi-Lo Cards · 2x</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["higher", "lower"] as const).map((call) => (
+                      <button
+                        key={call}
+                        onClick={() => playHilo(call)}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        {call}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   onClick={claimDaily}
                   className="w-full rounded-lg bg-coin/15 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-coin transition-colors hover:bg-coin/25"
@@ -728,6 +812,33 @@ function Clubhouse() {
                   claim daily streak
                 </button>
               </div>
+            </div>
+
+            {/* promo codes */}
+            <div className="glass rounded-2xl p-4">
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                Redeem a code
+              </div>
+              <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/10">
+                <input
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") redeem();
+                  }}
+                  placeholder="enter code…"
+                  className="flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-mist"
+                />
+                <button
+                  onClick={redeem}
+                  className="font-mono text-[10px] uppercase tracking-wider text-coin hover:opacity-80"
+                >
+                  redeem
+                </button>
+              </div>
+              <p className="mt-2 font-mono text-[10px] text-mist">
+                Codes drop in chat and each one works once per account.
+              </p>
             </div>
 
             {/* achievements */}
