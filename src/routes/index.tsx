@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useGuest } from "@/lib/guest";
+import { useAccount, perksFor } from "@/lib/account";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
 
 export const Route = createFileRoute("/")({
@@ -41,14 +41,18 @@ type ProfileRow = {
 
 function Clubhouse() {
   const qc = useQueryClient();
-  const { guest, loading, join, leave } = useGuest();
-  const user = guest;
+  const { account, loading, signUp, signIn, signOut } = useAccount();
+  const user = account;
   const [handle, setHandle] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"in" | "up">("in");
   const [joining, setJoining] = useState(false);
   const [roomSlug, setRoomSlug] = useState("general");
   const [draft, setDraft] = useState("");
   const [modTarget, setModTarget] = useState<{ id: string; username: string } | null>(null);
   const [flipBet, setFlipBet] = useState(50);
+  const [dicePick, setDicePick] = useState(3);
+  const [codeInput, setCodeInput] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
 
   const profile = useQuery({
@@ -204,6 +208,78 @@ function Clubhouse() {
     toast[result.won ? "success" : "error"](
       `${result.flip.toUpperCase()} — ${result.won ? `you won ◈ ${flipBet}` : `you lost ◈ ${flipBet}`}`,
     );
+    refreshAll();
+  }
+
+  async function playDice() {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_dice", {
+      _user: user.id,
+      bet: flipBet,
+      pick: dicePick,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { roll: number; won: boolean };
+    toast[r.won ? "success" : "error"](
+      `Rolled ${r.roll} — ${r.won ? `5x payout on ◈ ${flipBet}` : "no luck"}`,
+    );
+    refreshAll();
+  }
+
+  async function playSlots() {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_slots", {
+      _user: user.id,
+      bet: flipBet,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { reels: string[]; won: boolean; payout: number };
+    toast[r.won ? "success" : "error"](
+      `${r.reels.join(" ")} — ${r.won ? `${r.payout}x payout` : "no match"}`,
+    );
+    refreshAll();
+  }
+
+  async function playRps(pick: "rock" | "paper" | "scissors") {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_rps", {
+      _user: user.id,
+      bet: flipBet,
+      pick,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { house: string; result: string };
+    toast[r.result === "win" ? "success" : r.result === "draw" ? "info" : "error"](
+      `House played ${r.house} — ${r.result}`,
+    );
+    refreshAll();
+  }
+
+  async function playHilo(call: "higher" | "lower") {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_hilo", {
+      _user: user.id,
+      bet: flipBet,
+      call,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { card: number; next: number; result: string };
+    toast[r.result === "win" ? "success" : r.result === "push" ? "info" : "error"](
+      `${r.card} → ${r.next} — ${r.result}`,
+    );
+    refreshAll();
+  }
+
+  async function redeem() {
+    if (!user || !codeInput.trim()) return;
+    const { data, error } = await supabase.rpc("redeem_code", {
+      _user: user.id,
+      _code: codeInput.trim(),
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { reward: number; note: string };
+    setCodeInput("");
+    toast.success(`Code accepted — ◈ ${r.reward} added`);
     refreshAll();
   }
 
