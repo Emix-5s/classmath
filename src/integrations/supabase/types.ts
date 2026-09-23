@@ -44,6 +44,42 @@ export type Database = {
         }
         Relationships: []
       }
+      code_redemptions: {
+        Row: {
+          code_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           created_at: string
@@ -163,6 +199,30 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          active: boolean
+          code: string
+          id: string
+          note: string
+          reward: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          id?: string
+          note?: string
+          reward: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          id?: string
+          note?: string
+          reward?: number
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           id: string
@@ -252,6 +312,32 @@ export type Database = {
           },
         ]
       }
+      user_credentials: {
+        Row: {
+          created_at: string
+          password_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          password_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          password_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_credentials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -335,12 +421,40 @@ export type Database = {
         Args: { _actor: string; _message: string }
         Returns: undefined
       }
+      game_settle: {
+        Args: { _bet: number; _payout: number; _user: string; _won: boolean }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      login_user: {
+        Args: { _password: string; _username: string }
+        Returns: {
+          banned: boolean
+          coins: number
+          created_at: string
+          font_key: string
+          id: string
+          last_claim_at: string | null
+          level: number
+          muted_until: string | null
+          name_color: string
+          streak: number
+          username: string
+          vip_tier: string | null
+          xp: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       mod_action: {
         Args: {
@@ -355,6 +469,46 @@ export type Database = {
         Args: { _user: string; bet: number; guess: string }
         Returns: Json
       }
+      play_dice: {
+        Args: { _user: string; bet: number; pick: number }
+        Returns: Json
+      }
+      play_hilo: {
+        Args: { _user: string; bet: number; call: string }
+        Returns: Json
+      }
+      play_rps: {
+        Args: { _user: string; bet: number; pick: string }
+        Returns: Json
+      }
+      play_slots: { Args: { _user: string; bet: number }; Returns: Json }
+      redeem_code: { Args: { _code: string; _user: string }; Returns: Json }
+      signup_user: {
+        Args: { _password: string; _username: string }
+        Returns: {
+          banned: boolean
+          coins: number
+          created_at: string
+          font_key: string
+          id: string
+          last_claim_at: string | null
+          level: number
+          muted_until: string | null
+          name_color: string
+          streak: number
+          username: string
+          vip_tier: string | null
+          xp: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      vip_max_bet: { Args: { _tier: string }; Returns: number }
+      vip_mult: { Args: { _tier: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "mod" | "user"

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useGuest } from "@/lib/guest";
+import { useAccount, perksFor } from "@/lib/account";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
 
 export const Route = createFileRoute("/")({
@@ -41,14 +41,18 @@ type ProfileRow = {
 
 function Clubhouse() {
   const qc = useQueryClient();
-  const { guest, loading, join, leave } = useGuest();
-  const user = guest;
+  const { account, loading, signUp, signIn, signOut } = useAccount();
+  const user = account;
   const [handle, setHandle] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"in" | "up">("in");
   const [joining, setJoining] = useState(false);
   const [roomSlug, setRoomSlug] = useState("general");
   const [draft, setDraft] = useState("");
   const [modTarget, setModTarget] = useState<{ id: string; username: string } | null>(null);
   const [flipBet, setFlipBet] = useState(50);
+  const [dicePick, setDicePick] = useState(3);
+  const [codeInput, setCodeInput] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
 
   const profile = useQuery({
@@ -207,6 +211,78 @@ function Clubhouse() {
     refreshAll();
   }
 
+  async function playDice() {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_dice", {
+      _user: user.id,
+      bet: flipBet,
+      pick: dicePick,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { roll: number; won: boolean };
+    toast[r.won ? "success" : "error"](
+      `Rolled ${r.roll} — ${r.won ? `5x payout on ◈ ${flipBet}` : "no luck"}`,
+    );
+    refreshAll();
+  }
+
+  async function playSlots() {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_slots", {
+      _user: user.id,
+      bet: flipBet,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { reels: string[]; won: boolean; payout: number };
+    toast[r.won ? "success" : "error"](
+      `${r.reels.join(" ")} — ${r.won ? `${r.payout}x payout` : "no match"}`,
+    );
+    refreshAll();
+  }
+
+  async function playRps(pick: "rock" | "paper" | "scissors") {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_rps", {
+      _user: user.id,
+      bet: flipBet,
+      pick,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { house: string; result: string };
+    toast[r.result === "win" ? "success" : r.result === "draw" ? "info" : "error"](
+      `House played ${r.house} — ${r.result}`,
+    );
+    refreshAll();
+  }
+
+  async function playHilo(call: "higher" | "lower") {
+    if (!user) return;
+    const { data, error } = await supabase.rpc("play_hilo", {
+      _user: user.id,
+      bet: flipBet,
+      call,
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { card: number; next: number; result: string };
+    toast[r.result === "win" ? "success" : r.result === "push" ? "info" : "error"](
+      `${r.card} → ${r.next} — ${r.result}`,
+    );
+    refreshAll();
+  }
+
+  async function redeem() {
+    if (!user || !codeInput.trim()) return;
+    const { data, error } = await supabase.rpc("redeem_code", {
+      _user: user.id,
+      _code: codeInput.trim(),
+    });
+    if (error) return void toast.error(error.message);
+    const r = data as { reward: number; note: string };
+    setCodeInput("");
+    toast.success(`Code accepted — ◈ ${r.reward} added`);
+    refreshAll();
+  }
+
   async function claimDaily() {
     if (!user) return;
     const { data, error } = await supabase.rpc("claim_daily", { _user: user.id });
@@ -288,9 +364,10 @@ function Clubhouse() {
             e.preventDefault();
             setJoining(true);
             try {
-              await join(handle);
+              if (mode === "up") await signUp(handle, password);
+              else await signIn(handle, password);
             } catch (err) {
-              toast.error(err instanceof Error ? err.message : "Try another handle");
+              toast.error(err instanceof Error ? err.message : "Something went wrong");
             } finally {
               setJoining(false);
             }
@@ -299,25 +376,50 @@ function Clubhouse() {
         >
           <div className="font-display text-xl font-bold tracking-tight">Nexus Clubhouse</div>
           <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-mist">
-            pick a handle to enter
+            {mode === "up" ? "create your account" : "welcome back"}
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-white/[0.04] p-1 ring-1 ring-white/10">
+            {(["in", "up"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`rounded-lg px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                  mode === m ? "bg-accent/15 text-accent" : "text-mist hover:text-foreground"
+                }`}
+              >
+                {m === "in" ? "sign in" : "sign up"}
+              </button>
+            ))}
+          </div>
           <input
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            placeholder="Handle (e.g. astra)"
+            placeholder="Username"
+            autoComplete="username"
             required
             maxLength={20}
-            className="mt-5 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
+            className="mt-3 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
+          />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            placeholder="Password"
+            autoComplete={mode === "up" ? "new-password" : "current-password"}
+            required
+            minLength={4}
+            className="mt-2 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm ring-1 ring-white/10 outline-none placeholder:text-mist focus:ring-accent/40"
           />
           <button
             type="submit"
             disabled={joining}
             className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 font-display text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            Enter the clubhouse
+            {mode === "up" ? "Create account" : "Enter the clubhouse"}
           </button>
           <p className="mt-3 font-mono text-[10px] text-mist">
-            No password — your handle is saved on this device.
+            Username and password only — no email needed.
           </p>
         </form>
       </div>
@@ -375,9 +477,9 @@ function Clubhouse() {
               </button>
             )}
             <button
-              onClick={leave}
+              onClick={signOut}
               className="grid size-9 place-items-center rounded-full bg-panel2 font-display text-sm font-bold ring-1 ring-white/10 transition-colors hover:bg-white/10"
-              title="Leave and pick a new handle"
+              title="Sign out"
             >
               {(p?.username ?? "?").charAt(0).toUpperCase()}
             </button>
@@ -581,44 +683,128 @@ function Clubhouse() {
               </div>
             </div>
 
-            {/* earn coins */}
-            <div className="glass rounded-2xl p-4">
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
-                Earn coins
+            {/* vip perks */}
+            <div className="rounded-2xl border border-vip/20 bg-vip/[0.06] p-4 backdrop-blur-xl">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                  VIP perks
+                </span>
+                <span className="shimmer rounded-full bg-vip/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-vip">
+                  {p?.vip_tier ?? "no tier"}
+                </span>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-8 place-items-center rounded-lg bg-coin/15 font-display text-xs font-bold text-coin">
-                    ◈
+              <ul className="space-y-1 font-mono text-[10px] text-mist">
+                <li>
+                  winnings ×{perksFor(p?.vip_tier).mult} on every game
+                </li>
+                <li>max bet ◈ {formatCoins(perksFor(p?.vip_tier).maxBet)}</li>
+                <li>glowing VIP badge beside your name in chat</li>
+                <li>{p?.vip_tier ? "priority in mod-desk requests" : "buy VIP in the shop to unlock"}</li>
+              </ul>
+            </div>
+
+            {/* arcade */}
+            <div className="glass rounded-2xl p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                  Arcade
+                </span>
+                <span className="font-mono text-[10px] text-coin">bet ◈ {flipBet}</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={perksFor(p?.vip_tier).maxBet}
+                step={10}
+                value={Math.min(flipBet, perksFor(p?.vip_tier).maxBet)}
+                onChange={(e) => setFlipBet(Number(e.target.value))}
+                className="w-full accent-coin"
+              />
+
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Coin Flip · 2x</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => playFlip("heads")}
+                      className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    >
+                      Heads
+                    </button>
+                    <button
+                      onClick={() => playFlip("tails")}
+                      className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    >
+                      Tails
+                    </button>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">Coin Flip</div>
-                    <div className="font-mono text-[10px] text-mist">bet ◈ {flipBet}</div>
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Dice Roll · 5x</div>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setDicePick(n)}
+                        className={`flex-1 rounded-lg py-1.5 font-mono text-xs transition-colors ${
+                          dicePick === n
+                            ? "bg-accent/15 text-accent ring-1 ring-accent/40"
+                            : "bg-white/[0.04] text-mist hover:bg-white/10"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
                   </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={500}
-                    step={10}
-                    value={flipBet}
-                    onChange={(e) => setFlipBet(Number(e.target.value))}
-                    className="w-16 accent-coin"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => playFlip("heads")}
-                    className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    onClick={playDice}
+                    className="mt-2 w-full rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
                   >
-                    Heads
-                  </button>
-                  <button
-                    onClick={() => playFlip("tails")}
-                    className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
-                  >
-                    Tails
+                    Roll the dice
                   </button>
                 </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Neon Slots · up to 12x</div>
+                  <button
+                    onClick={playSlots}
+                    className="w-full rounded-lg bg-coin/15 px-3 py-2 text-xs font-medium text-coin transition-colors hover:bg-coin/25"
+                  >
+                    ◈ ★ ☾ spin
+                  </button>
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Rock Paper Scissors · 2x</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["rock", "paper", "scissors"] as const).map((pick) => (
+                      <button
+                        key={pick}
+                        onClick={() => playRps(pick)}
+                        className="rounded-lg bg-white/[0.04] px-2 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        {pick}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-1.5 text-sm font-medium">Hi-Lo Cards · 2x</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["higher", "lower"] as const).map((call) => (
+                      <button
+                        key={call}
+                        onClick={() => playHilo(call)}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        {call}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   onClick={claimDaily}
                   className="w-full rounded-lg bg-coin/15 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-coin transition-colors hover:bg-coin/25"
@@ -626,6 +812,33 @@ function Clubhouse() {
                   claim daily streak
                 </button>
               </div>
+            </div>
+
+            {/* promo codes */}
+            <div className="glass rounded-2xl p-4">
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                Redeem a code
+              </div>
+              <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/10">
+                <input
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") redeem();
+                  }}
+                  placeholder="enter code…"
+                  className="flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-mist"
+                />
+                <button
+                  onClick={redeem}
+                  className="font-mono text-[10px] uppercase tracking-wider text-coin hover:opacity-80"
+                >
+                  redeem
+                </button>
+              </div>
+              <p className="mt-2 font-mono text-[10px] text-mist">
+                Codes drop in chat and each one works once per account.
+              </p>
             </div>
 
             {/* achievements */}
