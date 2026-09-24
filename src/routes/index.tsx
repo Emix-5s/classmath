@@ -356,7 +356,11 @@ function Clubhouse() {
     qc.invalidateQueries({ queryKey: ["is-mod"] });
   }
 
-  if (!loading && !user) {
+  if (loading) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
+  if (!user) {
     return (
       <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background px-4 text-foreground">
         <div className="pointer-events-none absolute inset-0">
