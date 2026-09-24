@@ -465,6 +465,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mod_grant_coins: {
+        Args: { _actor: string; _amount: number; _target: string }
+        Returns: undefined
+      }
       play_coin_flip: {
         Args: { _user: string; bet: number; guess: string }
         Returns: Json
