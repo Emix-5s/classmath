@@ -53,7 +53,9 @@ function Clubhouse() {
   const [flipBet, setFlipBet] = useState(50);
   const [dicePick, setDicePick] = useState(3);
   const [codeInput, setCodeInput] = useState("");
+  const [roomView, setRoomView] = useState<"chat" | "game">("chat");
   const scroller = useRef<HTMLDivElement>(null);
+  const gameFrame = useRef<HTMLIFrameElement>(null);
 
   const profile = useQuery({
     queryKey: ["profile", user?.id],
@@ -557,93 +559,134 @@ function Clubhouse() {
 
           {/* chat */}
           <main className="rise glass flex flex-col overflow-hidden rounded-2xl lg:col-span-6">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-mod" />
                 <span className="font-display text-sm font-semibold"># {roomSlug}</span>
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-mist">
-                {messages.data?.length ?? 0} recent
-              </span>
-            </div>
-            <div ref={scroller} className="h-[420px] space-y-4 overflow-y-auto p-4">
-              {(messages.data ?? []).length === 0 && (
-                <p className="font-mono text-[11px] text-mist">
-                  No messages yet — say something first.
-                </p>
-              )}
-              {(messages.data ?? []).map((m) => {
-                const author = m.profiles as unknown as {
-                  username: string;
-                  name_color: string;
-                  font_key: string;
-                  vip_tier: string | null;
-                } | null;
-                return (
-                  <div key={m.id} className="group flex gap-3">
-                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-panel2 font-display text-xs font-bold ring-1 ring-white/10">
-                      {(author?.username ?? "?").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() =>
-                            setModTarget({
-                              id: m.user_id,
-                              username: author?.username ?? "user",
-                            })
-                          }
-                          className={`text-sm font-semibold ${fontClass(author?.font_key)}`}
-                          style={{ color: author?.name_color ?? undefined }}
-                        >
-                          {author?.username ?? "unknown"}
-                        </button>
-                        {author?.vip_tier && (
-                          <span className="shimmer rounded bg-vip/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-vip">
-                            {author.vip_tier}
-                          </span>
-                        )}
-                        {isMod.data && !m.deleted && (
-                          <button
-                            onClick={async () => {
-                              const { error } = await supabase.rpc("delete_message", {
-                                _actor: user!.id,
-                                _message: m.id,
-                              });
-                              if (error) toast.error(error.message);
-                            }}
-                            className="ml-auto font-mono text-[9px] uppercase tracking-wider text-mist opacity-0 transition-opacity group-hover:opacity-100"
-                          >
-                            remove
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-sm leading-snug text-foreground/80">{m.content}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="border-t border-white/10 p-3">
-              <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/10">
-                <input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") send();
-                  }}
-                  placeholder={`Message #${roomSlug}…`}
-                  maxLength={500}
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-mist"
-                />
+              <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-1 ring-1 ring-white/10">
                 <button
-                  onClick={send}
-                  className="font-mono text-[10px] uppercase tracking-wider text-mist hover:text-accent"
+                  type="button"
+                  onClick={() => setRoomView("chat")}
+                  className={`rounded-md px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                    roomView === "chat" ? "bg-accent/15 text-accent" : "text-mist hover:text-foreground"
+                  }`}
                 >
-                  ⏎ send
+                  Chat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoomView("game")}
+                  className={`rounded-md px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                    roomView === "game" ? "bg-vip/15 text-vip" : "text-mist hover:text-foreground"
+                  }`}
+                >
+                  Synth Purge
                 </button>
               </div>
             </div>
+            {roomView === "chat" ? (
+              <>
+                <div ref={scroller} className="h-[420px] space-y-4 overflow-y-auto p-4">
+                  {(messages.data ?? []).length === 0 && (
+                    <p className="font-mono text-[11px] text-mist">
+                      No messages yet — say something first.
+                    </p>
+                  )}
+                  {(messages.data ?? []).map((m) => {
+                    const author = m.profiles as unknown as {
+                      username: string;
+                      name_color: string;
+                      font_key: string;
+                      vip_tier: string | null;
+                    } | null;
+                    return (
+                      <div key={m.id} className="group flex gap-3">
+                        <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-panel2 font-display text-xs font-bold ring-1 ring-white/10">
+                          {(author?.username ?? "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() =>
+                                setModTarget({
+                                  id: m.user_id,
+                                  username: author?.username ?? "user",
+                                })
+                              }
+                              className={`text-sm font-semibold ${fontClass(author?.font_key)}`}
+                              style={{ color: author?.name_color ?? undefined }}
+                            >
+                              {author?.username ?? "unknown"}
+                            </button>
+                            {author?.vip_tier && (
+                              <span className="shimmer rounded bg-vip/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-vip">
+                                {author.vip_tier}
+                              </span>
+                            )}
+                            {isMod.data && !m.deleted && (
+                              <button
+                                onClick={async () => {
+                                  const { error } = await supabase.rpc("delete_message", {
+                                    _actor: user.id,
+                                    _message: m.id,
+                                  });
+                                  if (error) toast.error(error.message);
+                                }}
+                                className="ml-auto font-mono text-[9px] uppercase tracking-wider text-mist opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                remove
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-sm leading-snug text-foreground/80">{m.content}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-white/10 p-3">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/10">
+                    <input
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") send();
+                      }}
+                      placeholder={`Message #${roomSlug}…`}
+                      maxLength={500}
+                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-mist"
+                    />
+                    <button
+                      onClick={send}
+                      className="font-mono text-[10px] uppercase tracking-wider text-mist hover:text-accent"
+                    >
+                      ⏎ send
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="relative h-[min(70vh,680px)] min-h-[480px] bg-ink">
+                <iframe
+                  ref={gameFrame}
+                  src="/games/synth-purge/index.html"
+                  title="Synth Purge"
+                  allow="autoplay; fullscreen; gamepad"
+                  sandbox="allow-scripts allow-same-origin allow-pointer-lock"
+                  className="size-full border-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => gameFrame.current?.requestFullscreen()}
+                  className="absolute top-3 right-3 grid size-9 place-items-center rounded-lg bg-background/80 text-sm text-foreground ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-background"
+                  title="Play full screen"
+                  aria-label="Play Synth Purge full screen"
+                >
+                  ⛶
+                </button>
+              </div>
+            )}
           </main>
 
           {/* right rail */}
