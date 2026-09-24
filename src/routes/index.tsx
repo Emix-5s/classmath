@@ -21,6 +21,8 @@ export const Route = createFileRoute("/")({
         content:
           "Live chat rooms with coin rewards, a shop of skins, fonts and VIP ranks, mini-games and achievements.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Clubhouse,
@@ -429,6 +431,7 @@ function Clubhouse() {
   }
 
   const p = profile.data;
+  const currentUserId = user.id;
   const xpFloor = ((p?.level ?? 1) - 1) * 500;
   const xpPct = p ? Math.min(100, ((p.xp - xpFloor) / 500) * 100) : 0;
 
@@ -628,7 +631,7 @@ function Clubhouse() {
                               <button
                                 onClick={async () => {
                                   const { error } = await supabase.rpc("delete_message", {
-                                    _actor: user.id,
+                                    _actor: currentUserId,
                                     _message: m.id,
                                   });
                                   if (error) toast.error(error.message);

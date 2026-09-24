@@ -59,11 +59,13 @@ export function useAccount() {
   return { account, loading, signUp, signIn, signOut };
 }
 
+const DEFAULT_PERKS = { mult: 1, maxBet: 500 };
+
 export const VIP_PERKS: Record<string, { mult: number; maxBet: number }> = {
-  none: { mult: 1, maxBet: 500 },
+  none: DEFAULT_PERKS,
   VIP: { mult: 1.25, maxBet: 1500 },
   "VIP+": { mult: 1.5, maxBet: 5000 },
 };
 
 export const perksFor = (tier: string | null | undefined) =>
-  VIP_PERKS[tier ?? "none"] ?? VIP_PERKS.none;
+  VIP_PERKS[tier ?? "none"] ?? DEFAULT_PERKS;
