@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYNTH PURGE - OVERDRIVE V6 FINAL BUILD</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 100vw; height: 100vh; overflow: hidden; font-family: 'Trebuchet MS', Arial, sans-serif; background: #000; }
+canvas { display: block; }
+
+#crt-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 3px, 3px 100%; pointer-events: none; z-index: 2000; opacity: 0.5;
+}
+
+#main-menu {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, #1a0b2e 0%, #050510 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 3000;
+}
+#main-menu h1 {
+    color: #f0f; font-size: 90px; text-shadow: 0 0 40px #f0f, 0 0 15px #0ff;
+    font-style: italic; letter-spacing: 10px; text-transform: uppercase;
+}
+.version { color: #0ff; font-size: 20px; font-weight: bold; letter-spacing: 5px; margin-bottom: 20px; text-shadow: 0 0 10px #0ff; }
+#time-status { color: #0ff; font-size: 18px; font-family: monospace; margin-bottom: 20px; letter-spacing: 3px; background: rgba(0, 255, 255, 0.1); padding: 5px 15px; border-left: 4px solid #0ff; }
+
+.lobby-box {
+    background: rgba(0,0,0,0.85); border: 2px solid #0ff; padding: 25px; width: 600px;
+    box-shadow: 0 0 30px rgba(0,255,255,0.3); display: flex; flex-direction: column; gap: 15px;
+    max-height: 80vh; overflow-y: auto;
+}
+.lobby-input {
+    background: rgba(0,0,0,0.5); border: 1px solid #f0f; color: #0ff; padding: 12px;
+    font-size: 18px; font-family: monospace; outline: none; text-transform: uppercase;
+}
+.section-header { color: #aaa; text-transform: uppercase; font-size: 14px; margin-top: 10px; border-bottom: 1px solid #333; padding-bottom: 3px;}
+.menu-btn-container { display: flex; gap: 15px; flex-wrap: wrap; }
+.main-btn {
+    flex: 1; min-width: 45%; padding: 15px; font-size: 20px; background: rgba(255, 0, 255, 0.1);
+    color: #fff; border: 2px solid #f0f; cursor: pointer; font-weight: bold;
+    transition: all 0.2s; text-transform: uppercase;
+}
+.main-btn:hover { background: #f0f; color: #000; box-shadow: 0 0 30px #f0f; }
+.main-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.mode-btn.active { box-shadow: 0 0 20px currentColor; }
+
+#manual-screen {
+    display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(5, 5, 16, 0.98); z-index: 4000; flex-direction: column;
+    justify-content: center; align-items: center; color: #0ff; padding: 50px;
+}
+#manual-screen h2 { font-size: 60px; color: #f0f; margin-bottom: 40px; text-shadow: 0 0 20px #f0f; }
+.manual-content { max-width: 900px; font-size: 18px; line-height: 1.6; background: rgba(0,0,0,0.8); padding: 40px; border: 2px solid #0ff; overflow-y: auto; height: 70vh; }
+.manual-content span { color: #f0f; font-weight: bold; }
+.manual-content h3 { color: #fff; text-transform: uppercase; margin: 20px 0 10px 0; border-bottom: 1px solid #0ff; padding-bottom: 5px;}
+.manual-content code { background: rgba(255,0,255,0.15); padding: 2px 6px; color: #ff0; font-family: monospace; border-radius: 3px; }
+
+#hud { display: none; position: absolute; color: #fff; font-weight: bold; font-family: 'Courier New', monospace; pointer-events: none; width: 100%; height: 100%; z-index: 100; }
+#status-top-left { position: absolute; top: 30px; left: 30px; display: flex; flex-direction: column; gap: 10px; }
+#op-status-hud { font-size: 18px; color: #0ff; background: rgba(0,0,0,0.7); padding: 8px 15px; border-left: 4px solid #0ff; }
+#wave-status-hud { font-size: 24px; color: #ff0; background: rgba(0,0,0,0.7); padding: 10px 20px; border-left: 4px solid #ff0; text-shadow: 0 0 10px #ff0; }
+#credits-hud { font-size: 22px; color: #fff; background: rgba(0,0,0,0.7); padding: 8px 15px; border-left: 4px solid #fff; }
+
+#health-bar-container { position: absolute; bottom: 40px; left: 40px; width: 400px; background: rgba(0, 0, 0, 0.6); border: 2px solid #0ff; padding: 5px; transform: skewX(-15deg); }
+#health-fill { height: 25px; background: linear-gradient(90deg, #f0f, #0ff); width: 100%; transition: width 0.15s; }
+
+#dash-bar-container { position: absolute; bottom: 10px; left: 40px; width: 400px; background: rgba(0, 0, 0, 0.6); border: 1px solid #ff0; padding: 3px; transform: skewX(-15deg); }
+#dash-fill { height: 8px; background: #ff0; box-shadow: 0 0 8px #ff0; width: 100%; }
+
+#weapon-info { position: absolute; bottom: 40px; right: 40px; text-align: right; transform: skewX(-15deg); }
+#weapon-name { font-size: 32px; color: #f0f; text-shadow: 0 0 15px #f0f; background: rgba(0,0,0,0.6); padding: 5px 20px; border-right: 4px solid #f0f; }
+#ammo-counter { font-size: 48px; color: #0ff; text-shadow: 0 0 15px #0ff; background: rgba(0,0,0,0.6); padding: 5px 20px; border-right: 4px solid #0ff; }
+
+#crosshair { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; pointer-events: none; z-index: 100; transition: transform 0.05s; }
+.crosshair-line { position: absolute; background: #0ff; box-shadow: 0 0 10px #0ff; transition: background 0.2s; }
+#crosshair .horizontal { width: 14px; height: 2px; left: -2px; top: 19px; }
+#crosshair .horizontal.right { left: 28px; }
+#crosshair .vertical { width: 2px; height: 14px; top: -2px; left: 19px; }
+#crosshair .vertical.bottom { top: 28px; }
+#crosshair.shooting { transform: translate(-50%, -50%) scale(1.5) rotate(45deg); }
+
+#interaction-prompt { display: none; position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; color: #ff0; text-shadow: 0 0 15px #ff0; background: rgba(0,0,0,0.8); padding: 10px 20px; border: 2px solid #ff0; z-index: 100; font-family: monospace; }
+
+/* ============ CAR HUD ============ */
+#dashboard {
+    display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85); border: 2px solid #0ff; padding: 15px 25px;
+    gap: 30px; box-shadow: 0 0 40px rgba(0, 255, 255, 0.4); border-radius: 12px; z-index: 105;
+    align-items: center; backdrop-filter: blur(4px);
+}
+.dash-gauge { text-align: center; position: relative; }
+.dash-val { font-size: 42px; color: #f0f; font-family: 'Courier New', monospace; text-shadow: 0 0 20px #f0f; line-height: 1; }
+.dash-label { font-size: 12px; color: #0ff; letter-spacing: 3px; margin-top: 4px; }
+
+.gauge-ring {
+    width: 140px; height: 140px; border-radius: 50%;
+    border: 3px solid #0ff; position: relative;
+    background: radial-gradient(circle, rgba(0,255,255,0.05) 0%, rgba(0,0,0,0.9) 70%);
+    box-shadow: inset 0 0 20px rgba(0,255,255,0.3), 0 0 15px rgba(0,255,255,0.4);
+}
+.gauge-needle {
+    position: absolute; bottom: 50%; left: 50%; width: 3px; height: 55px;
+    background: linear-gradient(to top, #0ff, #f0f); transform-origin: bottom center;
+    transform: translate(-50%, 0) rotate(-120deg); transition: transform 0.08s linear;
+    box-shadow: 0 0 8px #f0f; border-radius: 2px;
+}
+.gauge-center {
+    position: absolute; top: 50%; left: 50%; width: 14px; height: 14px;
+    background: #0ff; border-radius: 50%; transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px #0ff;
+}
+.gauge-value {
+    position: absolute; top: 55%; left: 50%; transform: translate(-50%, 0);
+    font-family: 'Courier New', monospace; font-size: 20px; color: #fff;
+    text-shadow: 0 0 10px #0ff; font-weight: bold;
+}
+.gauge-label {
+    position: absolute; top: 68%; left: 50%; transform: translate(-50%, 0);
+    font-family: monospace; font-size: 10px; color: #0ff; letter-spacing: 2px;
+}
+#gear-indicator {
+    display: inline-flex; justify-content: center; align-items: center;
+    width: 60px; height: 60px; border: 2px solid #f0f; border-radius: 8px;
+    font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold;
+    color: #f0f; text-shadow: 0 0 15px #f0f; background: rgba(255,0,255,0.08);
+    box-shadow: 0 0 15px rgba(255,0,255,0.4) inset;
+}
+
+/* ============ PLANE HUD ============ */
+#plane-hud {
+    display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 104; font-family: 'Courier New', monospace; color: #0ff;
+}
+.phud-panel {
+    position: absolute; background: rgba(0, 0, 0, 0.7); border: 1px solid #0ff;
+    padding: 10px 18px; border-radius: 6px; box-shadow: 0 0 15px rgba(0,255,255,0.35);
+    text-shadow: 0 0 8px #0ff;
+}
+#phud-heading {
+    top: 20px; left: 50%; transform: translateX(-50%);
+    width: 400px; height: 55px; overflow: hidden; position: absolute;
+    background: rgba(0,0,0,0.75); border: 1px solid #0ff; border-radius: 6px;
+    box-shadow: 0 0 20px rgba(0,255,255,0.4);
+}
+#phud-heading-strip { position: absolute; top: 0; left: 0; height: 100%; width: 100%; }
+.heading-tick { position: absolute; top: 8px; transform: translateX(-50%); color: #0ff; font-size: 11px; }
+.heading-tick.major { color: #fff; font-weight: bold; font-size: 13px; }
+.heading-tick-line { position: absolute; top: 24px; width: 1px; height: 8px; background: #0ff; transform: translateX(-50%); }
+.heading-tick-line.major { height: 12px; background: #fff; box-shadow: 0 0 6px #0ff; }
+#phud-heading-pointer { position: absolute; top: 0; left: 50%; width: 3px; height: 100%; background: #ff0; transform: translateX(-50%); box-shadow: 0 0 10px #ff0; }
+#phud-heading-value { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); color: #ff0; font-size: 13px; font-weight: bold; letter-spacing: 2px; }
+
+#phud-speed { top: 50%; left: 30px; transform: translateY(-50%); width: 130px; text-align: center; }
+#phud-speed .big { font-size: 38px; font-weight: bold; color: #0ff; line-height: 1; }
+#phud-speed .unit { font-size: 12px; color: #0aa; letter-spacing: 3px; margin-top: 4px; }
+#phud-speed .sub { font-size: 11px; color: #f0f; margin-top: 6px; }
+
+#phud-altitude { top: 50%; right: 30px; transform: translateY(-50%); width: 140px; text-align: center; }
+#phud-altitude .big { font-size: 38px; font-weight: bold; color: #0ff; line-height: 1; }
+#phud-altitude .unit { font-size: 12px; color: #0aa; letter-spacing: 3px; margin-top: 4px; }
+#phud-altitude .sub { font-size: 11px; color: #f0f; margin-top: 6px; }
+
+#phud-horizon {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 260px; height: 260px; border-radius: 50%;
+    border: 3px solid #0ff; overflow: hidden;
+    box-shadow: 0 0 30px rgba(0,255,255,0.5), inset 0 0 30px rgba(0,255,255,0.3);
+    background: #000;
+}
+#phud-horizon .sky {
+    position: absolute; top: -100%; left: 0; width: 100%; height: 200%;
+    background: linear-gradient(to bottom, #003366 0%, #00aaff 50%);
+    will-change: transform;
+}
+#phud-horizon .ground {
+    position: absolute; top: 50%; left: 0; width: 100%; height: 200%;
+    background: linear-gradient(to bottom, #8B4513 0%, #331a00 100%);
+    will-change: transform;
+}
+#phud-horizon .horizon-line-c {
+    position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
+    background: #ff0; transform: translateY(-50%); box-shadow: 0 0 8px #ff0; z-index: 2;
+}
+#phud-horizon .aircraft {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 120px; height: 4px; background: #ff0; z-index: 5;
+    box-shadow: 0 0 10px #ff0; border-radius: 2px;
+}
+#phud-horizon .aircraft::before,
+#phud-horizon .aircraft::after {
+    content: ''; position: absolute; top: 50%; width: 15px; height: 3px;
+    background: #ff0; box-shadow: 0 0 8px #ff0;
+}
+#phud-horizon .aircraft::before { left: -5px; transform: translateY(-50%); }
+#phud-horizon .aircraft::after  { right: -5px; transform: translateY(-50%); }
+#phud-horizon .reticle-dot {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 6px; height: 6px; background: #ff0; border-radius: 50%; z-index: 6;
+    box-shadow: 0 0 8px #ff0;
+}
+
+#phud-throttle { bottom: 30px; left: 50%; transform: translateX(-50%); width: 300px; height: 44px; padding: 8px 12px; }
+#phud-throttle .label { position: absolute; top: -18px; left: 0; font-size: 11px; letter-spacing: 3px; color: #0aa; }
+#phud-throttle .track { width: 100%; height: 14px; background: rgba(0,255,255,0.15); border: 1px solid #0ff; border-radius: 4px; overflow: hidden; position: relative; margin-top: 4px; }
+#phud-throttle .fill { height: 100%; background: linear-gradient(90deg, #0ff, #f0f, #ff0); width: 50%; transition: width 0.1s linear; box-shadow: 0 0 10px #f0f; }
+#phud-throttle .value { position: absolute; top: 4px; right: 12px; font-size: 14px; font-weight: bold; color: #fff; text-shadow: 0 0 8px #0ff; }
+
+#phud-vsi { bottom: 100px; right: 30px; width: 90px; text-align: center; }
+#phud-vsi .label { font-size: 10px; color: #0aa; letter-spacing: 2px; }
+#phud-vsi .value { font-size: 22px; font-weight: bold; color: #0ff; }
+#phud-vsi .value.climb { color: #0f0; text-shadow: 0 0 10px #0f0; }
+#phud-vsi .value.descend { color: #f00; text-shadow: 0 0 10px #f00; }
+
+#phud-bank { bottom: 100px; left: 30px; width: 90px; text-align: center; }
+#phud-bank .label { font-size: 10px; color: #0aa; letter-spacing: 2px; }
+#phud-bank .value { font-size: 22px; font-weight: bold; color: #ff0; }
+
+.warn-flash { animation: warnFl 0.6s ease-in-out infinite; }
+@keyframes warnFl { 0%,100% { color: #f00; text-shadow: 0 0 15px #f00; } 50% { color: #ff0; text-shadow: 0 0 15px #ff0; } }
+
+/* ============ SHOP ============ */
+#in-game-shop { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(5, 5, 20, 0.98); border: 2px solid #0ff; padding: 30px 40px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4); z-index: 2500; flex-direction: column; align-items: center; max-height: 92vh; width: 90vw; max-width: 1100px; }
+#in-game-shop h2 { color: #0ff; font-size: 32px; text-shadow: 0 0 15px #0ff; }
+.shop-credits-row { color: #f0f; font-size: 20px; margin: 8px 0 15px 0; font-family: monospace; }
+.shop-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; width: 100%; max-height: 60vh; overflow-y: auto; padding: 5px; }
+.shop-card { background: rgba(0,0,0,0.85); border: 1px solid #f0f; padding: 14px; text-align: center; position: relative; transition: all 0.15s; }
+.shop-card:hover { border-color: #0ff; box-shadow: 0 0 15px rgba(0,255,255,0.4); transform: translateY(-2px); }
+.shop-card.maxed { border-color: #0f0; opacity: 0.7; }
+.shop-card h3 { color: #fff; font-size: 15px; margin-bottom: 6px; letter-spacing: 1px; }
+.shop-card p { color: #aaa; font-size: 11px; margin-bottom: 10px; height: 42px; line-height: 1.3; }
+.shop-card .cost { color: #f0f; font-size: 16px; margin-bottom: 10px; font-family: monospace; font-weight: bold; }
+.shop-card button { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 8px 12px; cursor: pointer; width: 100%; transition: 0.15s; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+.shop-card button:hover:not(:disabled) { background: #0ff; color: #000; box-shadow: 0 0 15px #0ff; }
+.shop-card button:disabled { opacity: 0.4; cursor: not-allowed; }
+.shop-card .level { position: absolute; top: 6px; right: 8px; font-size: 10px; color: #0aa; font-family: monospace; }
+.close-shop { border: 2px solid #f00; color: #f00; background: transparent; padding: 10px 30px; cursor: pointer; margin-top: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+.close-shop:hover { background: #f00; color: #000; box-shadow: 0 0 15px #f00; }
+
+/* Kill feed */
+#kill-feed { position: absolute; top: 150px; right: 30px; font-size: 16px; max-width: 350px; pointer-events: none; }
+.kill-message { background: rgba(0, 0, 0, 0.8); padding: 8px 15px; margin: 5px 0; border-left: 4px solid #f0f; font-family: monospace; text-transform: uppercase; font-size: 13px; }
+.kill-message.cheat { border-left-color: #ff0; color: #ff0; }
+.kill-message.good { border-left-color: #0f0; color: #0f0; }
+
+/* Cheat console */
+#cheat-console { display: none; position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); width: 600px; background: rgba(0, 0, 0, 0.98); border: 2px solid #0ff; padding: 15px; z-index: 2000; }
+#cheat-console input { width: 100%; background: transparent; border: none; color: #0ff; font-family: 'Courier New', monospace; font-size: 22px; outline: none; text-transform: uppercase; }
+#cheat-console::before { content: "SYS_OVR> "; color: #0ff; font-size: 22px; font-family: 'Courier New', monospace; position: absolute; left: 15px; }
+#cheat-input { padding-left: 120px; }
+#cheat-hints { position: absolute; bottom: -30px; left: 0; right: 0; color: #888; font-size: 11px; font-family: monospace; letter-spacing: 1px; }
+
+/* Supply drop */
+#supply-drop-indicator { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff0; font-size: 48px; text-shadow: 0 0 30px #ff0, 0 0 60px #f0f; z-index: 150; font-family: monospace; text-align: center; pointer-events: none; animation: pulse 0.5s ease-in-out infinite alternate; }
+@keyframes pulse { from { transform: translate(-50%, -50%) scale(1); opacity: 0.7; } to { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } }
+.supply-drop-marker { position: absolute; pointer-events: none; z-index: 150; color: #ff0; font-size: 14px; font-family: monospace; text-shadow: 0 0 10px #ff0; background: rgba(0,0,0,0.6); padding: 4px 8px; border: 1px solid #ff0; transform: translate(-50%, -50%); }
+.pickup-notification { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #0ff; font-size: 32px; font-family: monospace; text-shadow: 0 0 20px #0ff; pointer-events: none; z-index: 150; animation: floatUp 1s ease-out forwards; }
+@keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1.5); } }
+
+/* Pause */
+#pause-menu { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,5,16,0.92); z-index: 3500; flex-direction: column; justify-content: center; align-items: center; }
+#pause-menu h1 { color: #f0f; font-size: 60px; text-shadow: 0 0 20px #f0f; margin-bottom: 10px; }
+#pause-stats { color: #0ff; font-family: monospace; font-size: 18px; margin-bottom: 30px; }
+#pause-menu .main-btn { padding: 15px 30px; }
+
+/* Stats panel bottom-left */
+#stats-panel {
+    position: absolute; top: 150px; left: 30px; color: #0ff; font-family: monospace; font-size: 12px;
+    background: rgba(0,0,0,0.6); padding: 8px 12px; border-left: 3px solid #f0f; line-height: 1.6;
+    display: none;
+}
+#stats-panel .stat-line { white-space: nowrap; }
+#stats-panel .stat-val { color: #ff0; }
+</style>
+</head>
+<body>
+<div id="crt-overlay"></div>
+
+<div id="main-menu">
+    <h1>SYNTH PURGE</h1>
+    <div class="version">OVERDRIVE FINAL BUILD V6</div>
+    <div id="time-status"></div>
+    <div class="lobby-box">
+        <div class="section-header">Identity</div>
+        <input type="text" id="player-name" class="lobby-input" value="CYBER_PILOT" placeholder="PLAYER NAME">
+        <div class="section-header">Difficulty</div>
+        <div class="menu-btn-container" id="difficulty-select">
+            <button class="main-btn diff-btn" data-diff="easy" style="border-color:#0f0; color:#0f0;">EASY</button>
+            <button class="main-btn diff-btn active" data-diff="normal" style="border-color:#ff0; color:#ff0; box-shadow: 0 0 20px #ff0;">NORMAL</button>
+            <button class="main-btn diff-btn" data-diff="hard" style="border-color:#f00; color:#f00;">HARD</button>
+        </div>
+        <div class="section-header">Launch</div>
+        <button class="main-btn" id="start-offline-btn" style="width:100%; border-color:#0ff; color:#0ff;">[ START RUN ]</button>
+        <div id="best-wave-status" style="color:#aaa; font-size:14px; font-family:monospace; text-align:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:5px;">NO RUNS RECORDED YET</div>
+        <button class="main-btn" onclick="document.getElementById('manual-screen').style.display='flex'" style="border-color:#aaa; color:#aaa; font-size:16px; padding:10px;">VIEW MANUAL</button>
+    </div>
+</div>
+
+<div id="manual-screen">
+    <h2>SYSTEM MANUAL</h2>
+    <div class="manual-content">
+        <h3>Basic Combat</h3>
+        <p><span>WASD</span> Move · <span>SPACE</span> Jump · <span>SHIFT</span> Dash · <span>LEFT CLICK</span> Shoot · <span>1-4</span> Weapons · <span>`</span> Cheat Console · <span>ESC</span> Pause · <span>E</span> Interact</p>
+        <h3>Weapons</h3>
+        <p><span>V-BLASTER</span> rapid auto · <span>HEAVY PULSE</span> high damage · <span>RAILGUN</span> extreme precision · <span>PLASMA SHOTGUN</span> close-range swarm clear</p>
+        <h3>Ammo & Supply Drops</h3>
+        <p>Walk over <span>AMMO CRATES</span> to reload. Periodic <span>SUPPLY DROPS</span> grant HP, ammo, and credits.</p>
+        <h3>Cars</h3>
+        <p><span>W</span> Accelerate · <span>S</span> Brake/Reverse · <span>A/D</span> Steer · <span>SPACE</span> Hydraulic Jump</p>
+        <h3>Planes (Mouse Flight)</h3>
+        <p><span>MOUSE</span> Pitch & Roll · <span>W/S</span> Throttle Up/Down · <span>A/D</span> Rudder · <span>SPACE</span> Afterburner · <span>SHIFT</span> Idle</p>
+        <h3>Cheats (Press ` to open)</h3>
+        <p><code>godmode</code> · <code>ammo</code> · <code>money</code> · <code>heal</code> · <code>boss</code> · <code>finalboss</code> · <code>supply</code> · <code>killall</code> · <code>noclip</code> · <code>free</code> · <code>max</code> · <code>speed 3</code> · <code>wave 20</code> · <code>spawn 15</code> · <code>clear</code></p>
+    </div>
+    <button class="main-btn" onclick="document.getElementById('manual-screen').style.display='none'" style="margin-top:30px; border-color:#f00; color:#f00;">CLOSE MANUAL</button>
+</div>
+
+<div id="hud">
+    <div id="status-top-left">
+        <div id="op-status-hud">DIFFICULTY: <span id="role-text">NORMAL</span></div>
+        <div id="wave-status-hud">WAVE: <span id="wave-num">1</span></div>
+        <div id="credits-hud">CREDITS: <span id="hud-credits">0</span></div>
+    </div>
+    <div id="stats-panel">
+        <div class="stat-line">HP: <span class="stat-val" id="stat-hp">200/200</span></div>
+        <div class="stat-line">DMG: <span class="stat-val" id="stat-dmg">1.0x</span></div>
+        <div class="stat-line">SPD: <span class="stat-val" id="stat-spd">1.5x</span></div>
+        <div class="stat-line">CRIT: <span class="stat-val" id="stat-crit">0%</span></div>
+        <div class="stat-line">REGEN: <span class="stat-val" id="stat-regen">0/s</span></div>
+        <div class="stat-line">LIFESTEAL: <span class="stat-val" id="stat-lifesteal">0%</span></div>
+    </div>
+    <div id="kill-feed"></div>
+    <div id="health-bar-container"><div id="health-fill"></div></div>
+    <div id="dash-bar-container"><div id="dash-fill"></div></div>
+    <div id="weapon-info">
+        <div id="weapon-name">V-BLASTER</div>
+        <div id="ammo-counter">120</div>
+    </div>
+</div>
+
+<div id="dashboard">
+    <div class="dash-gauge">
+        <div class="gauge-ring">
+            <div class="gauge-needle" id="car-rpm-needle"></div>
+            <div class="gauge-center"></div>
+            <div class="gauge-value" id="car-rpm-val">0</div>
+            <div class="gauge-label">RPM x1000</div>
+        </div>
+    </div>
+    <div class="dash-gauge">
+        <div id="gear-indicator">N</div>
+        <div class="dash-label" style="margin-top:8px;">GEAR</div>
+    </div>
+    <div class="dash-gauge">
+        <div class="gauge-ring">
+            <div class="gauge-needle" id="car-speed-needle"></div>
+            <div class="gauge-center"></div>
+            <div class="gauge-value" id="car-speed-val">0</div>
+            <div class="gauge-label">MPH</div>
+        </div>
+    </div>
+</div>
+
+<div id="plane-hud">
+    <div id="phud-heading">
+        <div id="phud-heading-strip"></div>
+        <div id="phud-heading-pointer"></div>
+        <div id="phud-heading-value">000° N</div>
+    </div>
+    <div class="phud-panel" id="phud-speed">
+        <div class="big" id="phud-airspeed">000</div>
+        <div class="unit">KNOTS IAS</div>
+        <div class="sub" id="phud-mach">MACH 0.00</div>
+    </div>
+    <div class="phud-panel" id="phud-altitude">
+        <div class="big" id="phud-alt">0000</div>
+        <div class="unit">FEET MSL</div>
+        <div class="sub" id="phud-agl">AGL 0000</div>
+    </div>
+    <div id="phud-horizon">
+        <div class="sky" id="phud-sky"></div>
+        <div class="ground" id="phud-ground"></div>
+        <div class="horizon-line-c"></div>
+        <div class="aircraft"></div>
+        <div class="reticle-dot"></div>
+    </div>
+    <div class="phud-panel" id="phud-bank">
+        <div class="label">BANK</div>
+        <div class="value" id="phud-bank-val">0°</div>
+    </div>
+    <div class="phud-panel" id="phud-vsi">
+        <div class="label">V/S</div>
+        <div class="value" id="phud-vsi-val">0</div>
+        <div class="label">FT/MIN</div>
+    </div>
+    <div class="phud-panel" id="phud-throttle">
+        <div class="label">THROTTLE</div>
+        <div class="track"><div class="fill" id="phud-throttle-fill"></div></div>
+        <div class="value" id="phud-throttle-val">50%</div>
+    </div>
+</div>
+
+<div id="interaction-prompt">PRESS [E] TO INTERACT</div>
+
+<div id="crosshair">
+    <div class="crosshair-line horizontal"></div>
+    <div class="crosshair-line horizontal right"></div>
+    <div class="crosshair-line vertical"></div>
+    <div class="crosshair-line vertical bottom"></div>
+</div>
+
+<div id="supply-drop-indicator">⚠ SUPPLY DROP INCOMING ⚠</div>
+
+<div id="in-game-shop">
+    <h2>UPGRADE TERMINAL</h2>
+    <div class="shop-credits-row">CREDITS: <span id="shop-credits-display">0</span></div>
+    <div class="shop-items" id="shop-items-grid"></div>
+    <button class="close-shop" onclick="closeShop()">EXIT TERMINAL</button>
+</div>
+
+<div id="cheat-console">
+    <input type="text" id="cheat-input" autocomplete="off" spellcheck="false">
+    <div id="cheat-hints">Try: godmode · money · heal · max · free · killall · wave 10 · speed 2 · spawn 20</div>
+</div>
+
+<div id="pause-menu">
+    <h1>PAUSED</h1>
+    <div id="pause-stats"></div>
+    <div style="display:flex; gap:20px;">
+        <button class="main-btn" id="resume-btn" style="border-color:#0f0; color:#0f0;">RESUME</button>
+        <button class="main-btn" id="quit-btn" style="border-color:#f00; color:#f00;">QUIT TO MENU</button>
+    </div>
+</div>
+
+<script src="./three.min.js"></script>
+<script>
+// ============================================================
+//  SYNTH PURGE V6 — FINAL BUILD
+// ============================================================
+
+const $ = (id) => document.getElementById(id);
+const el = (id) => { const e = $(id); if (!e) console.warn('Missing element:', id); return e; };
+
+// --- STATE ---
+let gameActive = false, isPaused = false, difficulty = 'normal';
+const diffSettings = {
+    easy:   { healthMult: 0.7, speedMult: 0.85, spawnMult: 0.7, creditMult: 1.25, startCredits: 500 },
+    normal: { healthMult: 1.0, speedMult: 1.0,  spawnMult: 1.0, creditMult: 1.0,  startCredits: 0 },
+    hard:   { healthMult: 1.5, speedMult: 1.25, spawnMult: 1.4, creditMult: 1.5,  startCredits: 0 }
+};
+
+let totalCredits = parseInt(localStorage.getItem('synthPurge_credits')) || 0;
+let bestWave = parseInt(localStorage.getItem('synthPurge_bestWave')) || 0;
+let waveNum = 1;
+let freeShopping = false;
+
+const bestWaveEl = el('best-wave-status');
+if (bestWaveEl) bestWaveEl.textContent = bestWave > 0 ? `BEST WAVE REACHED: ${bestWave}` : 'NO RUNS RECORDED YET';
+
+const timeStatusEl = el('time-status');
+if (timeStatusEl) {
+    const h = new Date().getHours(), m = new Date().getMinutes().toString().padStart(2,'0');
+    const day = (h>=6 && h<18) ? 'NEON SUNRISE' : 'MIDNIGHT GRID';
+    timeStatusEl.textContent = `[LOCAL CLOCK: ${h}:${m}] :: [ENVIRONMENT: ${day}]`;
+}
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        difficulty = btn.dataset.diff;
+        document.querySelectorAll('.diff-btn').forEach(b => b.style.boxShadow = 'none');
+        btn.style.boxShadow = `0 0 20px ${getComputedStyle(btn).color}`;
+    });
+});
+
+// ============================================================
+//  AUDIO
+// ============================================================
+let audioCtx, bassCtx;
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!bassCtx) {
+        bassCtx = new (window.AudioContext || window.webkitAudioContext)();
+        setInterval(() => {
+            if (!gameActive || player.isDead || isShopOpen || isConsoleOpen) return;
+            const osc = bassCtx.createOscillator();
+            const gain = bassCtx.createGain();
+            osc.connect(gain); gain.connect(bassCtx.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(55, bassCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, bassCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, bassCtx.currentTime + 0.15);
+            osc.start(); osc.stop(bassCtx.currentTime + 0.15);
+        }, 300);
+    }
+}
+
+function playSound(type, pitchOverride = null) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+    if (type === 'shoot') {
+        osc.type = pitchOverride > 1000 ? 'sawtooth' : (pitchOverride < 500 ? 'square' : 'triangle');
+        osc.frequency.setValueAtTime(pitchOverride || 800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.15);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    } else if (type === 'hit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    } else if (type === 'dash') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.4);
+        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    } else if (type === 'bossDeath') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(50, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(10, audioCtx.currentTime + 2.0);
+        gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 2.0);
+        osc.start(); osc.stop(audioCtx.currentTime + 2.0);
+    } else if (type === 'pickup' || type === 'supply') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    }
+}
+
+// ============================================================
+//  THREE.JS
+// ============================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+scene.fog = new THREE.FogExp2(0x050510, 0.008);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
+camera.position.set(0, 1.6, 0);
+const flashLight = new THREE.PointLight(0xffffff, 0, 15);
+camera.add(flashLight);
+scene.add(camera);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+scene.add(new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.8));
+
+const sun = new THREE.Mesh(new THREE.CircleGeometry(300, 64), new THREE.MeshBasicMaterial({ color: 0xff0055, fog: false, side: THREE.DoubleSide }));
+sun.position.set(0, 150, -800);
+scene.add(sun);
+
+function createGridTexture(c1, c2) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = c1; ctx.fillRect(0, 0, 512, 512);
+    ctx.strokeStyle = c2; ctx.lineWidth = 4;
+    for (let i = 0; i <= 512; i += 64) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+}
+const groundTex = createGridTexture('#0a0a1a', '#ff00ff');
+groundTex.repeat.set(50, 50);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.1, metalness: 0.8 }));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+const wallTex = createGridTexture('#111122', '#00ffff');
+wallTex.repeat.set(2, 2);
+function createBuilding(x, z, w, h, d) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.2, metalness: 0.9 }));
+    mesh.position.set(x, h/2, z);
+    scene.add(mesh);
+}
+for (let i = 0; i < 20; i++) {
+    const bx = (Math.random()-0.5)*800, bz = (Math.random()-0.5)*800;
+    if (Math.abs(bx) > 100 || Math.abs(bz) > 100)
+        createBuilding(bx, bz, 30+Math.random()*40, 50+Math.random()*150, 30+Math.random()*40);
+}
+
+// ============================================================
+//  ENTITIES
+// ============================================================
+const shopEntities = [];
+function createShopTerminal(x, z) {
+    const group = new THREE.Group(); group.position.set(x, 1, z);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 3), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 }));
+    const holo = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.1, 16), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5 }));
+    holo.position.y = 1.5; group.add(base); group.add(holo);
+    scene.add(group); shopEntities.push(group);
+}
+
+const carEntities = [];
+class Car {
+    constructor(x, z) {
+        this.group = new THREE.Group(); this.group.position.set(x, 0.5, z);
+        const chassisMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 });
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 4.8), chassisMat);
+        chassis.position.y = 0.5; this.group.add(chassis);
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 2.5), new THREE.MeshStandardMaterial({ color: 0x00ffff, transparent: true, opacity: 0.7, emissive: 0x005555 }));
+        glass.position.set(0, 1.0, -0.5); this.group.add(glass);
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 5.0), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
+        trim.position.y = 0.2; this.group.add(trim);
+        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.9 });
+        const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        const positions = [[-1.2, 0.4, 1.8], [1.2, 0.4, 1.8], [-1.2, 0.4, -1.8], [1.2, 0.4, -1.8]];
+        positions.forEach(p => {
+            const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z = Math.PI/2; w.position.set(...p);
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.22, 16), neonMat); rim.rotation.z = Math.PI/2; rim.position.set(...p);
+            this.group.add(w); this.group.add(rim);
+        });
+        scene.add(this.group); carEntities.push(this);
+        this.speed = 0; this.angle = 0; this.yVelocity = 0;
+    }
+}
+
+const planeEntities = [];
+class Plane {
+    constructor(x, z) {
+        this.group = new THREE.Group(); this.group.position.set(x, 1.5, z);
+        const fusMat = new THREE.MeshStandardMaterial({color: 0x111122, metalness: 0.9, roughness: 0.1});
+        const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 5, 8), fusMat);
+        fuselage.rotation.x = Math.PI/2; this.group.add(fuselage);
+        const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        const wings = new THREE.Mesh(new THREE.BoxGeometry(8, 0.1, 2), neonMat); this.group.add(wings);
+        const magentaMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 1), magentaMat); tail.position.set(0, 0, -2.2); this.group.add(tail);
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 1.5), magentaMat); fin.position.set(0, 0.8, -2.2); this.group.add(fin);
+        const gunGeo = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
+        const gunL = new THREE.Mesh(gunGeo, fusMat); gunL.rotation.x = Math.PI/2; gunL.position.set(-2, -0.2, 0.5); this.group.add(gunL);
+        const gunR = new THREE.Mesh(gunGeo, fusMat); gunR.rotation.x = Math.PI/2; gunR.position.set(2, -0.2, 0.5); this.group.add(gunR);
+        const engine = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 8), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 }));
+        engine.rotation.x = Math.PI/2; engine.position.set(0, 0, 3); this.group.add(engine);
+        this.engineGlow = engine;
+        scene.add(this.group); planeEntities.push(this);
+        this.speed = 60; this.maxSpeed = 220; this.minSpeed = 40;
+        this.throttle = 0.5; this.pitch = 0; this.yaw = 0; this.roll = 0;
+        this.verticalSpeed = 0; this.previousY = this.group.position.y;
+    }
+}
+
+// Ammo crates
+const ammoCrates = [];
+class AmmoCrate {
+    constructor(x, z) {
+        this.group = new THREE.Group(); this.group.position.set(x, 0.5, z);
+        const box = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x00aaff, emissiveIntensity: 0.5, metalness: 0.8, roughness: 0.2 }));
+        this.group.add(box);
+        const ring = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4, wireframe: true }));
+        this.group.add(ring);
+        scene.add(this.group); ammoCrates.push(this);
+        this.pickedUp = false; this.bobTimer = 0; this.radius = 1.5;
+    }
+    update(delta) {
+        if (this.pickedUp) return;
+        this.bobTimer += delta;
+        this.group.position.y = 0.5 + Math.sin(this.bobTimer * 2) * 0.15;
+        this.group.rotation.y += delta * 1.5;
+        let pp = camera.position;
+        if (player.state === 'driving') pp = player.currentCar.group.position;
+        if (player.state === 'flying') pp = player.currentPlane.group.position;
+        if (this.group.position.distanceTo(pp) < this.radius) this.pickup();
+    }
+    pickup() {
+        if (this.pickedUp) return;
+        this.pickedUp = true;
+        const amt = 60 + Math.floor(Math.random() * 40);
+        player.ammo = Math.min(player.maxAmmo, player.ammo + amt);
+        showPickupNotification(`+${amt} AMMO`);
+        playSound('pickup');
+        spawnExplosion(this.group.position, 15, false, 0x00ffff);
+        scene.remove(this.group);
+        const i = ammoCrates.indexOf(this); if (i > -1) ammoCrates.splice(i, 1);
+    }
+}
+
+// Supply drops
+let supplyDropTimer = 30, supplyDropActive = false, supplyDropPosition = null, supplyDropGroup = null, supplyDropLanded = false, supplyDropBeacon = null, supplyDropMarker = null;
+
+function spawnSupplyDrop() {
+    let pp = camera.position;
+    if (player.state === 'driving') pp = player.currentCar.group.position;
+    if (player.state === 'flying') pp = player.currentPlane.group.position;
+    let x, z, tries = 0;
+    do {
+        const a = Math.random() * Math.PI * 2, d = 50 + Math.random() * 80;
+        x = pp.x + Math.cos(a) * d; z = pp.z + Math.sin(a) * d; tries++;
+    } while (tries < 20 && (Math.abs(x) > 300 || Math.abs(z) > 300));
+    supplyDropPosition = new THREE.Vector3(x, 150, z);
+    supplyDropActive = true; supplyDropLanded = false;
+
+    supplyDropBeacon = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 1, 16), new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.7 }));
+    supplyDropBeacon.position.set(x, 150, z); scene.add(supplyDropBeacon);
+
+    const marker = document.createElement('div');
+    marker.className = 'supply-drop-marker'; marker.textContent = '⬇ SUPPLY DROP';
+    marker.id = 'supply-drop-marker'; document.body.appendChild(marker);
+    supplyDropMarker = marker;
+    const ind = el('supply-drop-indicator'); if (ind) ind.style.display = 'block';
+    playSound('supply');
+    addKillMessage('⚠ INCOMING SUPPLY DROP', 'cheat');
+    setTimeout(() => { if (ind) ind.style.display = 'none'; }, 3000);
+
+    supplyDropGroup = new THREE.Group();
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2, 2.5), new THREE.MeshStandardMaterial({ color: 0xff8800, emissive: 0xff4400, emissiveIntensity: 0.3, metalness: 0.5, roughness: 0.5 }));
+    supplyDropGroup.add(crate);
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3, 3.5), new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.3, wireframe: true }));
+    supplyDropGroup.add(glow);
+    const iconMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.1), iconMat); b1.position.y = 1.2; supplyDropGroup.add(b1);
+    const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), iconMat); b2.position.y = 1.2; supplyDropGroup.add(b2);
+    supplyDropGroup.position.set(x, 150, z); scene.add(supplyDropGroup);
+}
+
+function updateSupplyDrop(delta, time) {
+    if (!supplyDropActive) return;
+    if (supplyDropBeacon) { supplyDropBeacon.rotation.y += delta * 2; supplyDropBeacon.position.y = 150 + Math.sin(time * 3) * 5; }
+    if (supplyDropMarker && supplyDropPosition) {
+        const pos = supplyDropPosition.clone(); pos.y = 150; pos.project(camera);
+        const x = (pos.x * 0.5 + 0.5) * window.innerWidth, y = (-pos.y * 0.5 + 0.5) * window.innerHeight;
+        if (pos.z < 1) { supplyDropMarker.style.display = 'block'; supplyDropMarker.style.left = x + 'px'; supplyDropMarker.style.top = y + 'px'; }
+        else supplyDropMarker.style.display = 'none';
+    }
+    if (supplyDropGroup && !supplyDropLanded) {
+        supplyDropGroup.position.y -= 80 * delta;
+        supplyDropGroup.rotation.x += delta * 3; supplyDropGroup.rotation.z += delta * 2;
+        if (supplyDropGroup.position.y <= 0.5) {
+            supplyDropGroup.position.y = 0.5; supplyDropLanded = true;
+            if (supplyDropBeacon) { scene.remove(supplyDropBeacon); supplyDropBeacon = null; }
+            if (supplyDropMarker) { supplyDropMarker.remove(); supplyDropMarker = null; }
+            spawnExplosion(supplyDropGroup.position, 30, false, 0xffff00);
+            playSound('supply');
+            addKillMessage('⚡ SUPPLY DROP LANDED', 'good');
+        }
+    }
+    if (supplyDropLanded && supplyDropGroup) {
+        let pp = camera.position;
+        if (player.state === 'driving') pp = player.currentCar.group.position;
+        if (player.state === 'flying') pp = player.currentPlane.group.position;
+        if (supplyDropGroup.position.distanceTo(pp) < 5) collectSupplyDrop();
+        const glow = supplyDropGroup.children[1];
+        if (glow) glow.material.opacity = 0.2 + Math.sin(time * 4) * 0.15;
+    }
+}
+
+function collectSupplyDrop() {
+    if (!supplyDropGroup) return;
+    const hp = 50 + Math.floor(Math.random() * 50);
+    const am = 100 + Math.floor(Math.random() * 100);
+    const cr = 300 + Math.floor(Math.random() * 700);
+    player.health = Math.min(player.maxHealth, player.health + hp);
+    player.ammo = Math.min(player.maxAmmo, player.ammo + am);
+    totalCredits += cr; localStorage.setItem('synthPurge_credits', totalCredits);
+    showPickupNotification(`❤ +${hp} HP`);
+    setTimeout(() => showPickupNotification(`🔫 +${am} AMMO`), 300);
+    setTimeout(() => showPickupNotification(`💰 +${cr} CR`), 600);
+    playSound('pickup');
+    spawnExplosion(supplyDropGroup.position, 40, false, 0xff8800);
+    scene.remove(supplyDropGroup); supplyDropGroup = null;
+    supplyDropActive = false; supplyDropLanded = false; supplyDropPosition = null;
+    if (supplyDropMarker) { supplyDropMarker.remove(); supplyDropMarker = null; }
+    addKillMessage('✅ SUPPLY LOOT COLLECTED', 'good');
+    const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits;
+}
+
+function showPickupNotification(text) {
+    const div = document.createElement('div');
+    div.className = 'pickup-notification'; div.textContent = text;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 1000);
+}
+
+const particles = [];
+function spawnExplosion(pos, count = 20, isBoss = false, colorOverride = null) {
+    const color = colorOverride || (isBoss ? 0xff00ff : 0x00ffff);
+    for (let i = 0; i < count; i++) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshBasicMaterial({ color }));
+        mesh.position.copy(pos);
+        mesh.velocity = new THREE.Vector3((Math.random()-0.5)*(isBoss?60:30), Math.random()*(isBoss?40:20), (Math.random()-0.5)*(isBoss?60:30));
+        mesh.life = 1.0; scene.add(mesh); particles.push(mesh);
+    }
+}
+
+// ============================================================
+//  WEAPONS & PLAYER
+// ============================================================
+const weapons = [
+    { name: 'V-BLASTER', dmg: 35, cd: 150, cost: 1, pitch: 900, color: '#0ff' },
+    { name: 'HEAVY PULSE', dmg: 90, cd: 500, cost: 5, pitch: 300, color: '#f0f' },
+    { name: 'RAILGUN', dmg: 250, cd: 1200, cost: 15, pitch: 1800, color: '#fff' },
+    { name: 'PLASMA SHOTGUN', dmg: 45, cd: 700, cost: 8, pitch: 500, color: '#ff0', pellets: 6, spread: 0.18 }
+];
+
+const player = {
+    velocity: new THREE.Vector3(), grounded: false,
+    health: 200, maxHealth: 200, ammo: 400, maxAmmo: 400, kills: 0,
+    speedMultiplier: 1.5, dmgMultiplier: 1.0, dashCooldown: 0,
+    carAccel: 0.08, carMaxSpeed: 2.5,
+    godmode: false, infiniteAmmo: false, noclip: false, isDead: false,
+    weaponIndex: 0, state: 'walking', currentCar: null, currentPlane: null,
+    regenRate: 0, dashCooldownMax: 1.5,
+    critChance: 0, lifesteal: 0, aimAssist: 0,
+    upgrades: { dmg: 0, car: 0, heal: 0, regen: 0, dash: 0, plating: 0, ammoRes: 0, sprint: 0, crit: 0, lifesteal: 0 }
+};
+
+let isMouseDown = false, isMouseDownPrev = false;
+let screenShake = 0, lastShotTime = 0;
+let yaw = 0, pitch = 0;
+
+// ============================================================
+//  SHOP CONFIGURATION — EXPANDED
+// ============================================================
+const SHOP_ITEMS = [
+    { id: 'dmg',      name: 'OVERCHARGE',      desc: 'Increase infantry damage by 50%.',              baseCost: 1000, maxLevel: 5,  color: '#f0f' },
+    { id: 'car',      name: 'NITRO INJECTION', desc: 'Increase vehicle acceleration and top speed.',  baseCost: 2000, maxLevel: 3,  color: '#0ff' },
+    { id: 'heal',     name: 'HULL REPAIR',     desc: 'Instantly restore full health.',                baseCost: 500,  maxLevel: 99, color: '#0f0' },
+    { id: 'regen',    name: 'REGEN MATRIX',    desc: 'Passively regenerate +3 HP/s in combat.',       baseCost: 3000, maxLevel: 5,  color: '#0f0' },
+    { id: 'dash',     name: 'DASH CORE',       desc: 'Reduce dash cooldown by 0.5s.',                 baseCost: 1500, maxLevel: 5,  color: '#ff0' },
+    { id: 'plating',  name: 'ADVANCED PLATING',desc: 'Increase max HP by 50. Heals you too.',         baseCost: 1200, maxLevel: 10, color: '#0af' },
+    { id: 'ammoRes',  name: 'AMMO RESERVE',    desc: 'Increase max ammo capacity by 100.',            baseCost: 800,  maxLevel: 10, color: '#0af' },
+    { id: 'sprint',   name: 'SPRINT LEGS',     desc: 'Increase infantry move speed by 15%.',          baseCost: 1800, maxLevel: 5,  color: '#f80' },
+    { id: 'crit',     name: 'CRIT MATRIX',     desc: '+10% critical hit chance (2x damage).',         baseCost: 2500, maxLevel: 5,  color: '#f0a' },
+    { id: 'lifesteal',name: 'VAMPIRIC ROUNDS', desc: 'Heal 5% of damage dealt.',                      baseCost: 4000, maxLevel: 4,  color: '#a0f' },
+    { id: 'aimAssist',name: 'SMART-TARGET AI', desc: 'Slight aim assist on nearby enemies.',          baseCost: 6000, maxLevel: 3,  color: '#ff0' }
+];
+
+function getItemCost(item) {
+    const lv = player.upgrades[item.id] || 0;
+    return Math.round(item.baseCost * Math.pow(1.6, lv));
+}
+
+function buildShopUI() {
+    const grid = el('shop-items-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    SHOP_ITEMS.forEach(item => {
+        const lv = player.upgrades[item.id] || 0;
+        const maxed = lv >= item.maxLevel;
+        const cost = getItemCost(item);
+        const card = document.createElement('div');
+        card.className = 'shop-card' + (maxed ? ' maxed' : '');
+        card.innerHTML = `
+            <div class="level">LV ${lv}/${item.maxLevel}</div>
+            <h3 style="color:${item.color}">${item.name}</h3>
+            <p>${item.desc}</p>
+            <div class="cost">${maxed ? 'MAXED' : cost + ' CR'}</div>
+            <button ${maxed ? 'disabled' : ''} onclick="buyInGameUpgrade('${item.id}')">${maxed ? 'MAX' : 'PURCHASE'}</button>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function buyInGameUpgrade(type) {
+    const item = SHOP_ITEMS.find(i => i.id === type);
+    if (!item) return;
+    const lv = player.upgrades[type] || 0;
+    if (lv >= item.maxLevel) { addKillMessage('SYS: ALREADY MAXED'); return; }
+    const cost = getItemCost(item);
+    if (!freeShopping && totalCredits < cost) { addKillMessage('SYS: INSUFFICIENT CREDITS'); return; }
+
+    if (!freeShopping) totalCredits -= cost;
+    player.upgrades[type] = lv + 1;
+    localStorage.setItem('synthPurge_credits', totalCredits);
+
+    // Apply effect
+    if (type === 'dmg') player.dmgMultiplier += 0.5;
+    else if (type === 'car') { player.carAccel += 0.05; player.carMaxSpeed += 1.0; }
+    else if (type === 'heal') player.health = player.maxHealth;
+    else if (type === 'regen') player.regenRate += 3;
+    else if (type === 'dash') player.dashCooldownMax = Math.max(0.3, player.dashCooldownMax - 0.5);
+    else if (type === 'plating') { player.maxHealth += 50; player.health += 50; }
+    else if (type === 'ammoRes') { player.maxAmmo += 100; player.ammo += 100; }
+    else if (type === 'sprint') player.speedMultiplier += 0.15;
+    else if (type === 'crit') player.critChance += 0.10;
+    else if (type === 'lifesteal') player.lifesteal += 0.05;
+    else if (type === 'aimAssist') player.aimAssist += 0.15;
+
+    const sc = el('shop-credits-display'); if (sc) sc.textContent = totalCredits;
+    const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits;
+    buildShopUI();
+    updateStatsPanel();
+    addKillMessage(`✅ ${item.name} LV${lv + 1}`, 'good');
+}
+
+window.buyInGameUpgrade = buyInGameUpgrade;
+
+window.closeShop = function() {
+    isShopOpen = false;
+    const shop = el('in-game-shop'); if (shop) shop.style.display = 'none';
+    renderer.domElement.requestPointerLock();
+};
+
+function updateStatsPanel() {
+    const p = el('stats-panel');
+    if (!p) return;
+    el('stat-hp').textContent = `${Math.round(player.health)}/${player.maxHealth}`;
+    el('stat-dmg').textContent = player.dmgMultiplier.toFixed(1) + 'x';
+    el('stat-spd').textContent = player.speedMultiplier.toFixed(2) + 'x';
+    el('stat-crit').textContent = Math.round(player.critChance * 100) + '%';
+    el('stat-regen').textContent = player.regenRate + '/s';
+    el('stat-lifesteal').textContent = Math.round(player.lifesteal * 100) + '%';
+}
+
+// ============================================================
+//  ENEMIES
+// ============================================================
+const enemies = [];
+class Enemy {
+    constructor(x, z) {
+        this.group = new THREE.Group(); this.group.position.set(x, 2, z);
+        this.bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0055, emissiveIntensity: 0.8, wireframe: true });
+        this.body = new THREE.Mesh(new THREE.OctahedronGeometry(1.5, 0), this.bodyMat);
+        this.group.add(this.body); scene.add(this.group);
+        this.group.userData = { health: 200 * diffSettings[difficulty].healthMult, hitEffect: 0, isBoss: false };
+        this.velocity = new THREE.Vector3();
+        this.speed = (6 + Math.random() * 4) * diffSettings[difficulty].speedMult;
+        this.hoverOffset = Math.random() * Math.PI * 2;
+        enemies.push(this);
+    }
+    update(delta, time) {
+        let tp = camera.position;
+        if (player.state === 'driving') tp = player.currentCar.group.position;
+        if (player.state === 'flying') tp = player.currentPlane.group.position;
+        const toP = new THREE.Vector3().subVectors(tp, this.group.position); toP.y = 0;
+        const dist = toP.length();
+        if (dist < 120) { const d = toP.normalize(); this.velocity.x = d.x * this.speed; this.velocity.z = d.z * this.speed; }
+        this.group.position.x += this.velocity.x * delta;
+        this.group.position.z += this.velocity.z * delta;
+        this.group.position.y = 2 + Math.sin(time * 5 + this.hoverOffset) * 0.8;
+        this.body.rotation.y += delta * 2; this.body.rotation.x += delta;
+        if (dist < 4 && Math.random() < 0.1 && !player.godmode) { player.health -= 20; screenShake = 0.2; playSound('hit'); }
+        if (this.group.userData.hitEffect > 0) { this.bodyMat.color.setHex(0xffffff); this.bodyMat.wireframe = false; this.group.userData.hitEffect--; }
+        else { this.bodyMat.color.setHex(0xff0055); this.bodyMat.wireframe = true; }
+    }
+}
+
+class Boss {
+    constructor(x, z) {
+        this.group = new THREE.Group(); this.group.position.set(x, 6, z);
+        this.bodyMat = new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff0055, emissiveIntensity: 1.5, wireframe: true });
+        this.body = new THREE.Mesh(new THREE.OctahedronGeometry(4, 0), this.bodyMat);
+        this.core = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 0), new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0xffffff}));
+        this.group.add(this.body); this.group.add(this.core); scene.add(this.group);
+        this.group.userData = { health: 2500 * diffSettings[difficulty].healthMult, hitEffect: 0, isBoss: true };
+        this.velocity = new THREE.Vector3(); this.speed = 9 * diffSettings[difficulty].speedMult;
+        enemies.push(this);
+    }
+    update(delta, time) {
+        let tp = camera.position;
+        if (player.state === 'driving') tp = player.currentCar.group.position;
+        if (player.state === 'flying') tp = player.currentPlane.group.position;
+        const toP = new THREE.Vector3().subVectors(tp, this.group.position); toP.y = 0;
+        const dist = toP.length();
+        if (dist < 200) { const d = toP.normalize(); this.velocity.x = d.x * this.speed; this.velocity.z = d.z * this.speed; }
+        this.group.position.x += this.velocity.x * delta; this.group.position.z += this.velocity.z * delta;
+        this.group.position.y = 5 + Math.sin(time * 3) * 2;
+        this.body.rotation.y += delta * 3; this.body.rotation.x += delta * 1.5;
+        this.core.rotation.y -= delta * 4;
+        if (dist < 8 && Math.random() < 0.2 && !player.godmode) { player.health -= 50; screenShake = 0.5; playSound('hit'); }
+        if (this.group.userData.hitEffect > 0) { this.bodyMat.color.setHex(0xffffff); this.bodyMat.wireframe = false; this.group.userData.hitEffect--; }
+        else { this.bodyMat.color.setHex(0xff00ff); this.bodyMat.wireframe = true; }
+    }
+}
+
+class FinalBoss {
+    constructor(x, z) {
+        this.group = new THREE.Group(); this.group.position.set(x, 15, z);
+        this.bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffaa00, emissiveIntensity: 2.0, wireframe: true });
+        this.body = new THREE.Mesh(new THREE.TorusKnotGeometry(6, 1.5, 100, 16), this.bodyMat);
+        this.core = new THREE.Mesh(new THREE.SphereGeometry(4, 32, 32), new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0xff0000}));
+        this.group.add(this.body); this.group.add(this.core); scene.add(this.group);
+        this.group.userData = { health: 15000 * diffSettings[difficulty].healthMult, hitEffect: 0, isBoss: true, isFinalBoss: true };
+        this.velocity = new THREE.Vector3(); this.speed = 12 * diffSettings[difficulty].speedMult;
+        enemies.push(this);
+    }
+    update(delta, time) {
+        let tp = camera.position;
+        if (player.state === 'driving') tp = player.currentCar.group.position;
+        if (player.state === 'flying') tp = player.currentPlane.group.position;
+        const toP = new THREE.Vector3().subVectors(tp, this.group.position); toP.y = 0;
+        const dist = toP.length();
+        if (dist < 300) { const d = toP.normalize(); this.velocity.x = d.x * this.speed; this.velocity.z = d.z * this.speed; }
+        this.group.position.x += this.velocity.x * delta; this.group.position.z += this.velocity.z * delta;
+        this.group.position.y = 12 + Math.sin(time * 2) * 4;
+        this.body.rotation.y -= delta * 2; this.body.rotation.x += delta * 2;
+        this.core.rotation.y += delta * 5;
+        if (dist < 12 && Math.random() < 0.3 && !player.godmode) { player.health -= 80; screenShake = 0.8; playSound('hit'); }
+        if (this.group.userData.hitEffect > 0) { this.bodyMat.color.setHex(0xffffff); this.bodyMat.wireframe = false; this.group.userData.hitEffect--; }
+        else { this.bodyMat.color.setHex(0xffaa00); this.bodyMat.wireframe = true; }
+    }
+}
+
+function removeEnemy(g) { const i = enemies.findIndex(e => e.group === g); if (i > -1) { scene.remove(g); enemies.splice(i, 1); } }
+function spawnEnemy() {
+    const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 80;
+    new Enemy(Math.cos(a) * d, Math.sin(a) * d);
+}
+
+// ============================================================
+//  SHOOTING
+// ============================================================
+function handleShooting(wp, now) {
+    lastShotTime = now;
+    if (!player.infiniteAmmo) player.ammo -= wp.cost;
+    playSound('shoot', wp.pitch);
+    screenShake = player.state === 'flying' ? 0.02 : 0.05;
+    flashLight.intensity = 3; flashLight.color.set(wp.color);
+    setTimeout(() => flashLight.intensity = 0, 50);
+    const cross = el('crosshair');
+    if (cross) { cross.classList.add('shooting'); setTimeout(() => cross.classList.remove('shooting'), 60); }
+
+    let rayOrigin = camera.position;
+    let rayDir = new THREE.Vector3();
+    camera.getWorldDirection(rayDir);
+    if (player.state === 'flying') {
+        rayOrigin = player.currentPlane.group.position.clone();
+        player.currentPlane.group.getWorldDirection(rayDir);
+    }
+
+    // Aim assist: bend ray toward nearest enemy within cone
+    if (player.aimAssist > 0 && enemies.length > 0) {
+        let nearest = null, nearestDot = 0.98 - player.aimAssist * 0.08;
+        for (const e of enemies) {
+            const toE = e.group.position.clone().sub(rayOrigin).normalize();
+            const dot = toE.dot(rayDir);
+            if (dot > nearestDot) { nearest = e; nearestDot = dot; }
+        }
+        if (nearest) {
+            const toE = nearest.group.position.clone().sub(rayOrigin).normalize();
+            rayDir.lerp(toE, player.aimAssist * 0.5).normalize();
+        }
+    }
+
+    const pellets = wp.pellets || 1;
+    for (let p = 0; p < pellets; p++) {
+        let dir = rayDir.clone();
+        if (wp.spread) {
+            dir.x += (Math.random()-0.5)*wp.spread; dir.y += (Math.random()-0.5)*wp.spread; dir.z += (Math.random()-0.5)*wp.spread;
+            dir.normalize();
+        }
+        const ray = new THREE.Raycaster(rayOrigin, dir);
+        const hits = ray.intersectObjects(enemies.map(e => e.group), true);
+        if (hits.length > 0) {
+            let tgt = hits[0].object;
+            while (tgt.parent && tgt.userData.health === undefined) tgt = tgt.parent;
+            if (tgt.userData && tgt.userData.health !== undefined) resolveHit(tgt, wp);
+        }
+    }
+}
+
+function resolveHit(target, wp) {
+    playSound('hit');
+    let dmg = wp.dmg * player.dmgMultiplier;
+    let isCrit = Math.random() < player.critChance;
+    if (isCrit) dmg *= 2;
+    target.userData.health -= dmg;
+    target.userData.hitEffect = 10;
+
+    // Lifesteal
+    if (player.lifesteal > 0) {
+        const heal = dmg * player.lifesteal;
+        player.health = Math.min(player.maxHealth, player.health + heal);
+    }
+
+    if (isCrit) {
+        const c = document.createElement('div');
+        c.className = 'kill-message';
+        c.style.color = '#ff0'; c.style.borderLeftColor = '#ff0';
+        c.textContent = `CRIT! ${Math.round(dmg)} DMG`;
+        const feed = el('kill-feed');
+        if (feed) { feed.appendChild(c); setTimeout(() => c.remove(), 1200); }
+    }
+
+    if (target.userData.health <= 0) {
+        const isB = target.userData.isBoss, isF = target.userData.isFinalBoss;
+        spawnExplosion(target.position, isF ? 300 : (isB ? 150 : 20), isB || isF);
+        removeEnemy(target);
+        const cMult = diffSettings[difficulty].creditMult;
+        if (isF) { playSound('bossDeath'); screenShake = 1.5; player.kills += 50; const g = Math.round(25000 * cMult); totalCredits += g; addKillMessage(`NEXUS APEX DESTROYED [+${g} CR]`, 'good'); }
+        else if (isB) { playSound('bossDeath'); screenShake = 0.8; player.kills += 5; const g = Math.round(5000 * cMult); totalCredits += g; addKillMessage(`OMEGA CONSTRUCT PURGED [+${g} CR]`, 'good'); }
+        else { player.kills++; const g = Math.round(200 * cMult); totalCredits += g; addKillMessage(`ENTITY SHATTERED [+${g} CR]`); }
+        localStorage.setItem('synthPurge_credits', totalCredits);
+        const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits;
+    }
+}
+
+// ============================================================
+//  UI HELPERS
+// ============================================================
+function updateWeaponUI() {
+    const wp = weapons[player.weaponIndex];
+    const n = el('weapon-name');
+    if (n) { n.textContent = wp.name; n.style.color = wp.color; n.style.borderRightColor = wp.color; n.style.textShadow = `0 0 15px ${wp.color}`; }
+    document.querySelectorAll('.crosshair-line').forEach(l => { l.style.background = wp.color; l.style.boxShadow = `0 0 10px ${wp.color}`; });
+}
+
+function addKillMessage(msg, cls) {
+    const feed = el('kill-feed'); if (!feed) return;
+    const d = document.createElement('div');
+    d.className = 'kill-message' + (cls ? ' ' + cls : '');
+    d.textContent = msg;
+    feed.appendChild(d);
+    setTimeout(() => d.remove(), 4000);
+}
+
+function updateRoleHUD() { const r = el('role-text'); if (r) r.textContent = difficulty.toUpperCase(); }
+
+// ============================================================
+//  INPUT
+// ============================================================
+const keys = {};
+window.addEventListener('keydown', (e) => {
+    if (!gameActive || isPaused) return;
+    if (e.key === '`') { e.preventDefault(); toggleCheatConsole(); return; }
+    if (e.key.toLowerCase() === 'e' && !isConsoleOpen && !isShopOpen) handleInteraction();
+    if (!isConsoleOpen && !isShopOpen) {
+        keys[e.key.toLowerCase()] = true;
+        if (player.state === 'walking' || player.state === 'flying') {
+            if (e.key === '1') { player.weaponIndex = 0; updateWeaponUI(); }
+            if (e.key === '2') { player.weaponIndex = 1; updateWeaponUI(); }
+            if (e.key === '3') { player.weaponIndex = 2; updateWeaponUI(); }
+            if (e.key === '4') { player.weaponIndex = 3; updateWeaponUI(); }
+        }
+    }
+});
+window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+document.addEventListener('mousemove', (e) => {
+    if (!gameActive || document.pointerLockElement !== renderer.domElement || player.isDead) return;
+    if (player.state === 'walking') {
+        yaw -= e.movementX * 0.002;
+        pitch -= e.movementY * 0.002;
+        pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+    } else if (player.state === 'driving') {
+        yaw -= e.movementX * 0.002; pitch = 0;
+    } else if (player.state === 'flying' && player.currentPlane) {
+        const p = player.currentPlane;
+        p.pitch -= e.movementY * 0.0018;
+        p.roll  -= e.movementX * 0.0022;
+        p.pitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, p.pitch));
+        p.roll  = Math.max(-Math.PI/1.2, Math.min(Math.PI/1.2, p.roll));
+    }
+});
+
+document.addEventListener('mousedown', () => { if (gameActive && document.pointerLockElement === renderer.domElement) isMouseDown = true; });
+document.addEventListener('mouseup', () => { isMouseDown = false; });
+document.addEventListener('click', () => {
+    if (gameActive && !isConsoleOpen && !isShopOpen && !player.isDead && document.pointerLockElement !== renderer.domElement)
+        renderer.domElement.requestPointerLock();
+});
+
+// ============================================================
+//  INTERACTION
+// ============================================================
+let interactTarget = null, isShopOpen = false;
+
+function handleInteraction() {
+    if (player.state === 'driving') {
+        player.state = 'walking';
+        camera.position.copy(player.currentCar.group.position); camera.position.y += 1.6; camera.position.x += 4;
+        player.currentCar = null;
+        const d = el('dashboard'); if (d) d.style.display = 'none';
+        const c = el('crosshair'); if (c) c.style.display = 'block';
+        return;
+    }
+    if (player.state === 'flying') {
+        player.state = 'walking';
+        camera.position.copy(player.currentPlane.group.position); camera.position.y += 1.6; camera.position.x += 6;
+        player.currentPlane = null;
+        const ph = el('plane-hud'); if (ph) ph.style.display = 'none';
+        const c = el('crosshair'); if (c) c.style.display = 'block';
+        return;
+    }
+    if (interactTarget) {
+        if (interactTarget.type === 'car') {
+            player.state = 'driving'; player.currentCar = interactTarget.obj;
+            const d = el('dashboard'); if (d) d.style.display = 'flex';
+            const c = el('crosshair'); if (c) c.style.display = 'none';
+        } else if (interactTarget.type === 'plane') {
+            player.state = 'flying'; player.currentPlane = interactTarget.obj;
+            const ph = el('plane-hud'); if (ph) ph.style.display = 'block';
+            const c = el('crosshair'); if (c) c.style.display = 'none';
+        } else if (interactTarget.type === 'shop') {
+            isShopOpen = true; isMouseDown = false; document.exitPointerLock();
+            const s = el('in-game-shop'); if (s) s.style.display = 'flex';
+            const sc = el('shop-credits-display'); if (sc) sc.textContent = totalCredits;
+            buildShopUI();
+        }
+    }
+}
+
+// ============================================================
+//  CHEAT CONSOLE — EXPANDED
+// ============================================================
+const cheatInput = el('cheat-input');
+const cheatConsole = el('cheat-console');
+let isConsoleOpen = false;
+
+function toggleCheatConsole() {
+    isConsoleOpen = !isConsoleOpen;
+    if (isConsoleOpen) {
+        document.exitPointerLock();
+        if (cheatConsole) cheatConsole.style.display = 'block';
+        if (cheatInput) { cheatInput.value = ''; setTimeout(() => cheatInput.focus(), 10); }
+    } else {
+        if (cheatConsole) cheatConsole.style.display = 'none';
+        if (gameActive) renderer.domElement.requestPointerLock();
+    }
+}
+
+if (cheatInput) {
+    cheatInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const raw = cheatInput.value.trim().toLowerCase();
+        const parts = raw.split(/\s+/);
+        const cmd = parts[0];
+        const arg = parts[1];
+
+        switch (cmd) {
+            case 'godmode': case 'iddqd':
+                player.godmode = !player.godmode;
+                addKillMessage(`SYS: GODMODE ${player.godmode ? 'ON' : 'OFF'}`, 'cheat');
+                break;
+            case 'ammo': case 'idkfa':
+                player.infiniteAmmo = !player.infiniteAmmo;
+                if (player.infiniteAmmo) player.ammo = 9999;
+                addKillMessage(`SYS: INF AMMO ${player.infiniteAmmo ? 'ON' : 'OFF'}`, 'cheat');
+                break;
+            case 'money': case 'rich':
+                totalCredits += 10000;
+                localStorage.setItem('synthPurge_credits', totalCredits);
+                { const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits; }
+                addKillMessage('SYS: +10K CREDITS', 'cheat');
+                break;
+            case 'heal':
+                player.health = player.maxHealth;
+                addKillMessage('SYS: FULL HEAL', 'cheat');
+                break;
+            case 'boss': {
+                const cd = new THREE.Vector3(); camera.getWorldDirection(cd);
+                new Boss(camera.position.x + cd.x * 20, camera.position.z + cd.z * 20);
+                addKillMessage('SYS: OMEGA THREAT', 'cheat');
+                break;
+            }
+            case 'finalboss': {
+                const cd = new THREE.Vector3(); camera.getWorldDirection(cd);
+                new FinalBoss(camera.position.x + cd.x * 30, camera.position.z + cd.z * 30);
+                addKillMessage('SYS: NEXUS APEX', 'cheat');
+                break;
+            }
+            case 'supply':
+                spawnSupplyDrop();
+                addKillMessage('SYS: SUPPLY DROP FORCED', 'cheat');
+                break;
+            case 'killall': {
+                const n = enemies.length;
+                [...enemies].forEach(e => {
+                    spawnExplosion(e.group.position, 20, e.group.userData.isBoss, 0xff00ff);
+                    removeEnemy(e.group);
+                });
+                addKillMessage(`SYS: ${n} ENEMIES PURGED`, 'cheat');
+                break;
+            }
+            case 'noclip':
+                player.noclip = !player.noclip;
+                addKillMessage(`SYS: NOCLIP ${player.noclip ? 'ON' : 'OFF'}`, 'cheat');
+                break;
+            case 'free':
+                freeShopping = !freeShopping;
+                addKillMessage(`SYS: FREE SHOPPING ${freeShopping ? 'ON' : 'OFF'}`, 'cheat');
+                break;
+            case 'max':
+                SHOP_ITEMS.forEach(item => {
+                    for (let i = 0; i < item.maxLevel; i++) {
+                        player.upgrades[item.id] = (player.upgrades[item.id] || 0) + 1;
+                        if (item.id === 'dmg') player.dmgMultiplier += 0.5;
+                        else if (item.id === 'car') { player.carAccel += 0.05; player.carMaxSpeed += 1.0; }
+                        else if (item.id === 'regen') player.regenRate += 3;
+                        else if (item.id === 'dash') player.dashCooldownMax = Math.max(0.3, player.dashCooldownMax - 0.5);
+                        else if (item.id === 'plating') { player.maxHealth += 50; player.health += 50; }
+                        else if (item.id === 'ammoRes') { player.maxAmmo += 100; player.ammo += 100; }
+                        else if (item.id === 'sprint') player.speedMultiplier += 0.15;
+                        else if (item.id === 'crit') player.critChance += 0.10;
+                        else if (item.id === 'lifesteal') player.lifesteal += 0.05;
+                        else if (item.id === 'aimAssist') player.aimAssist += 0.15;
+                    }
+                });
+                updateStatsPanel();
+                addKillMessage('SYS: ALL UPGRADES MAXED', 'cheat');
+                break;
+            case 'speed':
+                if (arg && !isNaN(parseFloat(arg))) {
+                    player.speedMultiplier = parseFloat(arg);
+                    addKillMessage(`SYS: SPEED = ${arg}x`, 'cheat');
+                } else addKillMessage('USAGE: speed 2.5', 'cheat');
+                break;
+            case 'wave':
+                if (arg && !isNaN(parseInt(arg))) {
+                    waveNum = parseInt(arg);
+                    { const w = el('wave-num'); if (w) w.textContent = waveNum; }
+                    addKillMessage(`SYS: WAVE = ${waveNum}`, 'cheat');
+                } else addKillMessage('USAGE: wave 10', 'cheat');
+                break;
+            case 'spawn':
+                if (arg && !isNaN(parseInt(arg))) {
+                    const n = Math.min(200, parseInt(arg));
+                    for (let i = 0; i < n; i++) spawnEnemy();
+                    addKillMessage(`SYS: SPAWNED ${n}`, 'cheat');
+                } else addKillMessage('USAGE: spawn 15', 'cheat');
+                break;
+            case 'clear':
+                addKillMessage('SYS: FEED CLEARED', 'cheat');
+                { const f = el('kill-feed'); if (f) f.innerHTML = ''; }
+                break;
+            case 'help':
+                addKillMessage('CMDS: godmode ammo money heal boss finalboss supply killall noclip free max speed wave spawn clear', 'cheat');
+                break;
+            default:
+                if (raw !== '') addKillMessage('SYS: INVALID SYNTAX', 'cheat');
+        }
+        toggleCheatConsole();
+    });
+}
+
+// ============================================================
+//  PAUSE
+// ============================================================
+function togglePause() {
+    if (!gameActive) return;
+    isPaused = !isPaused;
+    if (isPaused) {
+        document.exitPointerLock();
+        const s = el('pause-stats');
+        if (s) s.textContent = `WAVE ${waveNum} :: KILLS ${player.kills} :: CREDITS ${totalCredits}`;
+        const m = el('pause-menu'); if (m) m.style.display = 'flex';
+    } else {
+        const m = el('pause-menu'); if (m) m.style.display = 'none';
+        renderer.domElement.requestPointerLock();
+    }
+}
+{ const r = el('resume-btn'); if (r) r.addEventListener('click', togglePause); }
+{ const q = el('quit-btn'); if (q) q.addEventListener('click', () => {
+    if (waveNum > bestWave) { bestWave = waveNum; localStorage.setItem('synthPurge_bestWave', bestWave); }
+    location.reload();
+}); }
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && gameActive && !isConsoleOpen && !isShopOpen) togglePause();
+});
+
+// ============================================================
+//  START
+// ============================================================
+{ const b = el('start-offline-btn'); if (b) b.addEventListener('click', startGame); }
+
+function startGame() {
+    const settings = diffSettings[difficulty];
+    totalCredits += settings.startCredits;
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+    document.getElementById('crosshair').style.display = 'block';
+    const sp = el('stats-panel'); if (sp) sp.style.display = 'block';
+    updateRoleHUD();
+    { const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits; }
+
+    initAudio();
+    createShopTerminal(20, -20);
+    createShopTerminal(-40, 50);
+    new Car(10, 10); new Car(-15, -15);
+    new Plane(25, 25); new Plane(-30, 10);
+    for (let i = 0; i < 12; i++) {
+        const x = (Math.random() - 0.5) * 160, z = (Math.random() - 0.5) * 160;
+        if (Math.abs(x) > 20 || Math.abs(z) > 20) new AmmoCrate(x, z);
+    }
+    for (let i = 0; i < Math.round(10 * settings.spawnMult); i++) spawnEnemy();
+
+    gameActive = true;
+    updateWeaponUI();
+    updateStatsPanel();
+    renderer.domElement.requestPointerLock();
+    lastTime = performance.now();
+    supplyDropTimer = 30;
+    animate();
+}
+
+// ============================================================
+//  CAR HUD
+// ============================================================
+function updateCarHUD(speedMph, rpm, gear) {
+    const sNeedle = el('car-speed-needle');
+    if (sNeedle) {
+        const t = Math.max(0, Math.min(1, speedMph / 180));
+        sNeedle.style.transform = `translate(-50%, 0) rotate(${-120 + t * 240}deg)`;
+    }
+    { const v = el('car-speed-val'); if (v) v.textContent = Math.round(speedMph); }
+    const rNeedle = el('car-rpm-needle');
+    if (rNeedle) {
+        const t = Math.max(0, Math.min(1, rpm / 8000));
+        rNeedle.style.transform = `translate(-50%, 0) rotate(${-120 + t * 240}deg)`;
+    }
+    { const v = el('car-rpm-val'); if (v) v.textContent = (rpm / 1000).toFixed(1); }
+    const g = el('gear-indicator');
+    if (g) {
+        g.textContent = gear;
+        if (gear === 'R') { g.style.color = '#f00'; g.style.borderColor = '#f00'; }
+        else if (gear === 'N') { g.style.color = '#ff0'; g.style.borderColor = '#ff0'; }
+        else { g.style.color = '#0f0'; g.style.borderColor = '#0f0'; }
+    }
+}
+
+// ============================================================
+//  PLANE HUD
+// ============================================================
+let _headingBuilt = false;
+function buildHeadingStrip() {
+    const strip = el('phud-heading-strip'); if (!strip || _headingBuilt) return;
+    for (let deg = 0; deg < 360; deg += 10) {
+        const tick = document.createElement('div');
+        tick.className = 'heading-tick' + (deg % 30 === 0 ? ' major' : '');
+        tick.dataset.deg = deg;
+        tick.textContent = deg % 30 === 0 ? (deg === 0 ? 'N' : deg === 90 ? 'E' : deg === 180 ? 'S' : deg === 270 ? 'W' : deg) : '';
+        strip.appendChild(tick);
+        const line = document.createElement('div');
+        line.className = 'heading-tick-line' + (deg % 30 === 0 ? ' major' : '');
+        line.dataset.deg = deg;
+        strip.appendChild(line);
+    }
+    _headingBuilt = true;
+}
+
+function updatePlaneHUD(p) {
+    buildHeadingStrip();
+    { const e = el('phud-airspeed'); if (e) e.textContent = String(Math.round(p.speed)).padStart(3, '0'); }
+    { const e = el('phud-mach'); if (e) e.textContent = 'MACH ' + (p.speed / 660).toFixed(2); }
+    { const alt = Math.round(p.group.position.y * 3.28); const e = el('phud-alt'); if (e) e.textContent = String(Math.max(0, alt)).padStart(4, '0'); }
+    { const agl = Math.max(0, Math.round((p.group.position.y - 1.5) * 3.28)); const e = el('phud-agl'); if (e) e.textContent = 'AGL ' + String(agl).padStart(4, '0'); }
+
+    let hd = (p.yaw * 180 / Math.PI) % 360; if (hd < 0) hd += 360;
+    { const e = el('phud-heading-value'); if (e) { const c = ['N','NE','E','SE','S','SW','W','NW']; e.textContent = String(Math.round(hd)).padStart(3,'0') + '° ' + c[Math.round(hd/45)%8]; } }
+    const strip = el('phud-heading-strip');
+    if (strip) {
+        strip.querySelectorAll('[data-deg]').forEach(n => {
+            const d = parseInt(n.dataset.deg, 10);
+            let diff = d - hd; while (diff > 180) diff -= 360; while (diff < -180) diff += 360;
+            n.style.left = (50 + diff * 4) + '%';
+        });
+    }
+
+    const pitchDeg = p.pitch * 180 / Math.PI, rollDeg = p.roll * 180 / Math.PI;
+    const pitchPx = pitchDeg * 3;
+    const sky = el('phud-sky'), gnd = el('phud-ground'), horizonEl = el('phud-horizon');
+    if (sky) sky.style.transform = `rotate(${-rollDeg}deg) translateY(${pitchPx}px)`;
+    if (gnd) gnd.style.transform = `rotate(${-rollDeg}deg) translateY(${pitchPx}px)`;
+    if (horizonEl) { const l = horizonEl.querySelector('.horizon-line-c'); if (l) l.style.transform = `rotate(${-rollDeg}deg) translateY(-50%)`; }
+
+    { const e = el('phud-bank-val'); if (e) { e.textContent = Math.abs(Math.round(rollDeg)) + '°'; e.classList.toggle('warn-flash', Math.abs(rollDeg) > 60); } }
+    { const e = el('phud-vsi-val'); if (e) { const v = Math.round(p.verticalSpeed); e.textContent = (v > 0 ? '+' : '') + v; e.classList.remove('climb','descend'); if (v > 200) e.classList.add('climb'); else if (v < -200) e.classList.add('descend'); } }
+    { const e = el('phud-throttle-fill'); if (e) e.style.width = (p.throttle * 100) + '%'; }
+    { const e = el('phud-throttle-val'); if (e) e.textContent = Math.round(p.throttle * 100) + '%'; }
+}
+
+// ============================================================
+//  MAIN LOOP
+// ============================================================
+let lastTime = 0;
+
+function update() {
+    const now = performance.now();
+    const delta = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
+    const timeSec = now / 1000;
+
+    if (player.isDead || !gameActive || isShopOpen || isConsoleOpen || isPaused) {
+        isMouseDown = false;
+        if (player.isDead || isPaused) return;
+    }
+
+    // Death check
+    if (player.health <= 0 && !player.godmode) {
+        player.isDead = true; gameActive = false;
+        const best = Math.max(bestWave, waveNum);
+        bestWave = best; localStorage.setItem('synthPurge_bestWave', best);
+        addKillMessage('SYSTEM FAILURE — RELOADING...', 'cheat');
+        setTimeout(() => location.reload(), 2200);
+    }
+
+    // Shooting
+    if (isMouseDown && (player.state === 'walking' || player.state === 'flying')) {
+        const wp = weapons[player.weaponIndex];
+        if (wp.name === 'V-BLASTER' || player.weaponIndex === 0) {
+            if (now - lastShotTime > wp.cd && (player.ammo >= wp.cost || player.infiniteAmmo)) handleShooting(wp, now);
+        } else if (!isMouseDownPrev) {
+            if (now - lastShotTime > wp.cd && (player.ammo >= wp.cost || player.infiniteAmmo)) handleShooting(wp, now);
+        }
+    }
+    isMouseDownPrev = isMouseDown;
+
+    interactTarget = null;
+    { const p = el('interaction-prompt'); if (p) p.style.display = 'none'; }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.position.addScaledVector(p.velocity, delta);
+        p.life -= delta * 1.5;
+        p.scale.setScalar(Math.max(0, p.life));
+        if (p.life <= 0) { scene.remove(p); particles.splice(i, 1); }
+    }
+
+    ammoCrates.forEach(c => c.update(delta));
+    updateSupplyDrop(delta, timeSec);
+    if (!supplyDropActive) { supplyDropTimer -= delta; if (supplyDropTimer <= 0) { spawnSupplyDrop(); supplyDropTimer = 45 + Math.random() * 30; } }
+
+    // ---- WALKING ----
+    if (player.state === 'walking') {
+        const md = new THREE.Vector3();
+        if (keys['w']) md.z += 1; if (keys['s']) md.z -= 1;
+        if (keys['a']) md.x += 1; if (keys['d']) md.x -= 1;
+        const cd = new THREE.Vector3(); camera.getWorldDirection(cd);
+        const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), cd).normalize();
+        const fwd = new THREE.Vector3(cd.x, 0, cd.z).normalize();
+        if (md.length() > 0) {
+            md.normalize();
+            const sp = 14 * player.speedMultiplier;
+            player.velocity.x = (right.x * md.x + fwd.x * md.z) * sp;
+            player.velocity.z = (right.z * md.x + fwd.z * md.z) * sp;
+        } else { player.velocity.x *= 0.75; player.velocity.z *= 0.75; }
+
+        if (keys['shift'] && player.dashCooldown <= 0 && md.length() > 0) {
+            player.velocity.x += (right.x * md.x + fwd.x * md.z) * 80;
+            player.velocity.z += (right.z * md.x + fwd.z * md.z) * 80;
+            player.dashCooldown = player.dashCooldownMax;
+            playSound('dash'); screenShake = 0.1;
+        }
+        if (player.dashCooldown > 0) player.dashCooldown -= delta;
+        { const e = el('dash-bar-container'); if (e) e.style.display = 'block'; }
+        { const e = el('dash-fill'); if (e) e.style.width = Math.max(0, (1 - (player.dashCooldown / player.dashCooldownMax)) * 100) + '%'; }
+
+        if (!player.noclip) {
+            player.velocity.y -= 35 * delta;
+            camera.position.y += player.velocity.y * delta;
+            if (camera.position.y <= 1.8) { camera.position.y = 1.8; player.velocity.y = 0; player.grounded = true; }
+            else player.grounded = false;
+            if (keys[' '] && player.grounded && !isConsoleOpen) { player.velocity.y = 14; keys[' '] = false; }
+        } else {
+            if (keys[' ']) camera.position.y += 20 * delta;
+            if (keys['shift']) camera.position.y -= 20 * delta;
+        }
+
+        camera.position.x += player.velocity.x * delta;
+        camera.position.z += player.velocity.z * delta;
+        camera.rotation.order = 'YXZ'; camera.rotation.y = yaw; camera.rotation.x = pitch;
+
+        let nd = 8;
+        carEntities.forEach(c => { const d = camera.position.distanceTo(c.group.position); if (d < nd) { nd = d; interactTarget = { type: 'car', obj: c }; } });
+        planeEntities.forEach(p => { const d = camera.position.distanceTo(p.group.position); if (d < nd) { nd = d; interactTarget = { type: 'plane', obj: p }; } });
+        shopEntities.forEach(s => { const d = camera.position.distanceTo(s.position); if (d < nd) { nd = d; interactTarget = { type: 'shop', obj: s }; } });
+        if (interactTarget) { const p = el('interaction-prompt'); if (p) p.style.display = 'block'; }
+
+    // ---- DRIVING ----
+    } else if (player.state === 'driving') {
+        const car = player.currentCar;
+        if (keys['w']) car.speed += player.carAccel * 1.5;
+        if (keys['s']) car.speed -= player.carAccel * 1.5;
+        car.speed *= 0.965;
+        car.speed = Math.max(-player.carMaxSpeed/2, Math.min(player.carMaxSpeed, car.speed));
+        if (Math.abs(car.speed) > 0.05) {
+            const sr = 0.045 * Math.min(1, Math.abs(car.speed) / 1.5);
+            if (keys['a']) car.angle += sr * Math.sign(car.speed);
+            if (keys['d']) car.angle -= sr * Math.sign(car.speed);
+        }
+        car.group.rotation.y = car.angle;
+        car.group.position.x += Math.sin(car.angle) * car.speed;
+        car.group.position.z += Math.cos(car.angle) * car.speed;
+        car.group.position.y += car.yVelocity * delta;
+        if (car.group.position.y > 0.5) car.yVelocity -= 40 * delta;
+        else { car.group.position.y = 0.5; car.yVelocity = 0; if (keys[' ']) { car.yVelocity = 20; playSound('dash'); keys[' '] = false; } }
+
+        camera.position.x = car.group.position.x - Math.sin(car.angle) * 10;
+        camera.position.z = car.group.position.z - Math.cos(car.angle) * 10;
+        camera.position.y = car.group.position.y + 4;
+        camera.lookAt(car.group.position); yaw = camera.rotation.y;
+
+        const mph = Math.abs(car.speed) * 70;
+        const rpm = 800 + Math.abs(car.speed) * 3800 + (Math.random() - 0.5) * 60;
+        const gear = car.speed > 0.05
+            ? (Math.abs(car.speed) < player.carMaxSpeed * 0.25 ? 1
+              : Math.abs(car.speed) < player.carMaxSpeed * 0.5 ? 2
+              : Math.abs(car.speed) < player.carMaxSpeed * 0.75 ? 3 : 4)
+            : (car.speed < -0.05 ? 'R' : 'N');
+        updateCarHUD(mph, rpm, gear);
+        { const e = el('dash-bar-container'); if (e) e.style.display = 'none'; }
+
+    // ---- FLYING ----
+    } else if (player.state === 'flying') {
+        const p = player.currentPlane;
+
+        if (keys['w']) p.throttle = Math.min(1, p.throttle + delta * 0.6);
+        if (keys['s']) p.throttle = Math.max(0, p.throttle - delta * 0.6);
+        if (keys['shift']) p.throttle = 0;
+        if (keys[' ']) p.throttle = 1;
+
+        let rudder = 0;
+        if (keys['a']) rudder = 1;
+        if (keys['d']) rudder = -1;
+        p.yaw += rudder * delta * 0.9;
+        p.yaw += Math.sin(p.roll) * 0.7 * delta;
+
+        if (p.pitch > 0.02) p.speed -= p.pitch * delta * 25;
+        else if (p.pitch < -0.02) p.speed += -p.pitch * delta * 25;
+
+        const targetSp = 40 + p.throttle * (p.maxSpeed - 40);
+        p.speed += (targetSp - p.speed) * delta * 0.9;
+        p.speed = Math.max(p.minSpeed, Math.min(p.maxSpeed, p.speed));
+
+        if (!keys['w'] && !keys['s']) p.pitch *= (1 - delta * 0.6);
+        if (Math.abs(p.roll) > 0.02) p.roll *= (1 - delta * 0.35);
+
+        p.group.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
+
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(p.group.quaternion);
+        p.group.position.addScaledVector(fwd, p.speed * delta);
+
+        p.verticalSpeed = (p.group.position.y - p.previousY) / delta * 196.85;
+        p.previousY = p.group.position.y;
+
+        if (p.group.position.y < 1.5) { p.group.position.y = 1.5; p.pitch = Math.max(0, p.pitch); }
+        if (p.group.position.y > 800) { p.group.position.y = 800; p.pitch = Math.min(0, p.pitch); }
+
+        if (p.engineGlow) {
+            const gs = 0.5 + p.throttle * 1.5;
+            p.engineGlow.scale.set(gs, gs, gs);
+            p.engineGlow.material.color.setHex(p.throttle > 0.85 ? 0xff00ff : 0x00ffff);
+        }
+
+        const camOff = new THREE.Vector3(0, 6, 18).applyQuaternion(p.group.quaternion);
+        const desired = p.group.position.clone().add(camOff);
+        camera.position.lerp(desired, Math.min(1, delta * 6));
+        const lookT = p.group.position.clone().add(new THREE.Vector3(0, 1, -10).applyQuaternion(p.group.quaternion));
+        camera.lookAt(lookT);
+        camera.rotation.z = -p.roll * 0.4;
+
+        updatePlaneHUD(p);
+        { const e = el('dash-bar-container'); if (e) e.style.display = 'none'; }
+    }
+
+    if (screenShake > 0) { camera.rotation.z += (Math.random() - 0.5) * screenShake; screenShake -= delta; }
+    else if (player.state !== 'flying') camera.rotation.z = 0;
+
+    enemies.forEach(e => e.update(delta, timeSec));
+
+    // Waves
+    if (enemies.length === 0 && gameActive) {
+        waveNum++;
+        { const e = el('wave-num'); if (e) e.textContent = waveNum; }
+        const sm = diffSettings[difficulty].spawnMult;
+        if (waveNum % 10 === 0) {
+            const a = Math.random() * Math.PI * 2;
+            new FinalBoss(Math.cos(a) * 120, Math.sin(a) * 120);
+            for (let i = 0; i < Math.round(8 * sm); i++) spawnEnemy();
+            addKillMessage('⚠ NEXUS APEX DETECTED', 'cheat');
+        } else if (waveNum % 3 === 0) {
+            const a = Math.random() * Math.PI * 2;
+            new Boss(Math.cos(a) * 80, Math.sin(a) * 80);
+            for (let i = 0; i < Math.round(5 * sm); i++) spawnEnemy();
+            addKillMessage('⚠ OMEGA CONSTRUCT DETECTED', 'cheat');
+        } else {
+            for (let i = 0; i < Math.round((10 + Math.floor(waveNum * 1.5)) * sm); i++) spawnEnemy();
+            addKillMessage(`WAVE ${waveNum} INCOMING`);
+        }
+        if (waveNum > bestWave) { bestWave = waveNum; localStorage.setItem('synthPurge_bestWave', bestWave); }
+    }
+
+    // Regen
+    if (player.regenRate > 0 && !player.isDead && player.health < player.maxHealth) {
+        player.health = Math.min(player.maxHealth, player.health + player.regenRate * delta);
+    }
+
+    // HUD updates
+    { const e = el('ammo-counter'); if (e) e.textContent = player.infiniteAmmo ? 'INF' : player.ammo; }
+    { const e = el('health-fill'); if (e) e.style.width = Math.max(0, (player.health / player.maxHealth) * 100) + '%'; }
+    // Update stats panel every ~10 frames
+    if (Math.floor(now / 100) % 2 === 0) updateStatsPanel();
+}
+
+function animate() {
+    if (!gameActive) return;
+    requestAnimationFrame(animate);
+    update();
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+console.log('SYNTH PURGE v6 — FINAL BUILD loaded');
+</script>
+</body>
+</html>
