@@ -672,7 +672,7 @@ function Clubhouse() {
                                   if (error) toast.error(error.message);
                                   else qc.invalidateQueries({ queryKey: ["messages"] });
                                 }}
-                                className="ml-auto font-mono text-[9px] uppercase tracking-wider text-mist opacity-0 transition-opacity group-hover:opacity-100"
+                                className="ml-auto font-mono text-[9px] uppercase tracking-wider text-mist opacity-60 transition-opacity group-hover:opacity-100"
                               >
                                 remove
                               </button>
