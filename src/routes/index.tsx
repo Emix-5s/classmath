@@ -191,7 +191,13 @@ function Clubhouse() {
       .from("messages")
       .insert({ room_id: room.id, user_id: user.id, content });
     if (error) {
-      toast.error("Message blocked — you may be muted or banned.");
+      const msg = error.message ?? "";
+      toast.error(
+        /slow down|spam|repeating|characters/.test(msg)
+          ? msg
+          : "Message blocked — you may be muted or banned.",
+      );
+      setDraft(content);
       return;
     }
     qc.invalidateQueries({ queryKey: ["achievements"] });
@@ -307,6 +313,25 @@ function Clubhouse() {
       return;
     }
     toast.success("Unlocked and equipped");
+    refreshAll();
+  }
+
+  async function equip(itemId: string) {
+    if (!user) return;
+    const { error } = await supabase.rpc("equip_item", { _user: user.id, _item: itemId });
+    if (error) return toast.error(error.message);
+    toast.success("Equipped");
+    refreshAll();
+  }
+
+  async function unequip(kind: string) {
+    if (!user || kind === "vip") return;
+    const { error } =
+      kind === "font"
+        ? await supabase.rpc("reset_font", { _user: user.id })
+        : await supabase.rpc("equip_item", { _user: user.id, _item: null as unknown as string });
+    if (error) return toast.error(error.message);
+    toast.success("Back to default");
     refreshAll();
   }
 
@@ -631,14 +656,21 @@ function Clubhouse() {
                                 {author.vip_tier}
                               </span>
                             )}
-                            {isMod.data && !m.deleted && (
+                            {(isMod.data || m.user_id === currentUserId) && !m.deleted && (
                               <button
                                 onClick={async () => {
-                                  const { error } = await supabase.rpc("delete_message", {
-                                    _actor: currentUserId,
-                                    _message: m.id,
-                                  });
+                                  const { error } =
+                                    m.user_id === currentUserId
+                                      ? await supabase.rpc("delete_own_message", {
+                                          _user: currentUserId,
+                                          _message: m.id,
+                                        })
+                                      : await supabase.rpc("delete_message", {
+                                          _actor: currentUserId,
+                                          _message: m.id,
+                                        });
                                   if (error) toast.error(error.message);
+                                  else qc.invalidateQueries({ queryKey: ["messages"] });
                                 }}
                                 className="ml-auto font-mono text-[9px] uppercase tracking-wider text-mist opacity-0 transition-opacity group-hover:opacity-100"
                               >
@@ -709,12 +741,22 @@ function Clubhouse() {
               <div className="grid grid-cols-2 gap-2.5">
                 {(shop.data ?? []).map((item) => {
                   const owned = inventory.data?.includes(item.id);
+                  const equipped =
+                    owned &&
+                    ((item.kind === "skin" && p?.name_color === item.value) ||
+                      (item.kind === "font" && p?.font_key === item.value) ||
+                      (item.kind === "vip" && p?.vip_tier === item.value));
                   return (
                     <button
                       key={item.id}
-                      onClick={() => buy(item.id)}
-                      disabled={owned}
-                      className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition-transform duration-300 hover:-translate-y-1 disabled:translate-y-0 disabled:opacity-50"
+                      onClick={() =>
+                        !owned
+                          ? buy(item.id)
+                          : equipped
+                            ? unequip(item.kind)
+                            : equip(item.id)
+                      }
+                      className={`rounded-xl border bg-white/[0.04] p-3 text-left transition-transform duration-300 hover:-translate-y-1 ${equipped ? "border-coin/60" : "border-white/10"}`}
                     >
                       <div
                         className={`font-mono text-[10px] uppercase tracking-wider ${rarityClass(item.rarity)}`}
@@ -725,7 +767,13 @@ function Clubhouse() {
                         {item.name}
                       </div>
                       <div className="mt-2 flex items-center gap-1 font-mono text-xs text-coin">
-                        {owned ? "owned" : `◈ ${formatCoins(item.price)}`}
+                        {!owned
+                          ? `◈ ${formatCoins(item.price)}`
+                          : equipped
+                            ? item.kind === "vip"
+                              ? "active"
+                              : "equipped · tap to remove"
+                            : "owned · tap to equip"}
                       </div>
                     </button>
                   );
