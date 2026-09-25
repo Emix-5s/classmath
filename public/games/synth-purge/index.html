@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SYNTH PURGE - OVERDRIVE V6 FINAL BUILD</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1716,6 +1716,57 @@ window.addEventListener('resize', () => {
 });
 
 console.log('SYNTH PURGE v6 — FINAL BUILD loaded');
+</script>
+
+<style>
+#tc{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none;touch-action:none}
+#tc .b{position:absolute;pointer-events:auto;border-radius:50%;background:rgba(0,255,255,.15);border:2px solid rgba(0,255,255,.6);color:#0ff;font:bold 13px monospace;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+#tc-joy{left:24px;bottom:24px;width:130px;height:130px}
+#tc-knob{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:rgba(0,255,255,.5)}
+#tc-look{position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto}
+</style>
+<div id="tc"><div id="tc-look"></div>
+<div class="b" id="tc-joy"><div id="tc-knob"></div></div>
+<div class="b" id="tc-fire" style="right:24px;bottom:40px;width:80px;height:80px">FIRE</div>
+<div class="b" id="tc-jump" style="right:120px;bottom:24px;width:56px;height:56px">JUMP</div>
+<div class="b" id="tc-dash" style="right:120px;bottom:96px;width:56px;height:56px">DASH</div>
+<div class="b" id="tc-e" style="right:40px;bottom:140px;width:50px;height:50px">E</div>
+<div class="b" id="tc-r" style="right:100px;bottom:170px;width:44px;height:44px">R</div>
+</div>
+<script>
+(function(){
+  if(!('ontouchstart' in window || navigator.maxTouchPoints>0)) return;
+  HTMLCanvasElement.prototype.requestPointerLock=function(){};
+  const tc=document.getElementById('tc');
+  setInterval(()=>{ tc.style.display=(gameActive&&!isPaused)?'block':'none'; },200);
+  const stop=e=>{e.preventDefault();e.stopPropagation();};
+  // joystick
+  const joy=document.getElementById('tc-joy'),knob=document.getElementById('tc-knob');let jid=null;
+  function setJoy(t){const r=joy.getBoundingClientRect();let dx=t.clientX-r.left-65,dy=t.clientY-r.top-65;const m=Math.hypot(dx,dy),mx=50;if(m>mx){dx*=mx/m;dy*=mx/m;}
+    knob.style.left=(40+dx)+'px';knob.style.top=(40+dy)+'px';
+    keys['w']=dy<-15;keys['s']=dy>15;keys['a']=dx<-15;keys['d']=dx>15;}
+  joy.addEventListener('touchstart',e=>{stop(e);const t=e.changedTouches[0];jid=t.identifier;setJoy(t);},{passive:false});
+  joy.addEventListener('touchmove',e=>{stop(e);for(const t of e.changedTouches)if(t.identifier===jid)setJoy(t);},{passive:false});
+  const jend=e=>{stop(e);jid=null;knob.style.left='40px';knob.style.top='40px';keys['w']=keys['s']=keys['a']=keys['d']=false;};
+  joy.addEventListener('touchend',jend,{passive:false});joy.addEventListener('touchcancel',jend,{passive:false});
+  // look
+  const look=document.getElementById('tc-look');let lid=null,lx=0,ly=0;
+  look.addEventListener('touchstart',e=>{stop(e);const t=e.changedTouches[0];lid=t.identifier;lx=t.clientX;ly=t.clientY;},{passive:false});
+  look.addEventListener('touchmove',e=>{stop(e);for(const t of e.changedTouches){if(t.identifier!==lid)continue;
+    const mx=(t.clientX-lx)*1.6,my=(t.clientY-ly)*1.6;lx=t.clientX;ly=t.clientY;if(player.isDead)return;
+    if(player.state==='walking'){yaw-=mx*0.004;pitch-=my*0.004;pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));}
+    else if(player.state==='driving'){yaw-=mx*0.004;pitch=0;}
+    else if(player.state==='flying'&&player.currentPlane){const p=player.currentPlane;p.pitch=Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,p.pitch-my*0.0035));p.roll=Math.max(-Math.PI/1.2,Math.min(Math.PI/1.2,p.roll-mx*0.0045));}}},{passive:false});
+  look.addEventListener('touchend',e=>{stop(e);lid=null;},{passive:false});
+  // buttons
+  function hold(id,on,off){const b=document.getElementById(id);b.addEventListener('touchstart',e=>{stop(e);on();},{passive:false});
+    b.addEventListener('touchend',e=>{stop(e);off&&off();},{passive:false});b.addEventListener('touchcancel',e=>{off&&off();});}
+  hold('tc-fire',()=>{isMouseDown=true;},()=>{isMouseDown=false;});
+  hold('tc-jump',()=>{keys[' ']=true;},()=>{keys[' ']=false;});
+  hold('tc-dash',()=>{keys['shift']=true;},()=>{keys['shift']=false;});
+  const tap=k=>()=>{window.dispatchEvent(new KeyboardEvent('keydown',{key:k}));setTimeout(()=>window.dispatchEvent(new KeyboardEvent('keyup',{key:k})),80);};
+  hold('tc-e',tap('e'));hold('tc-r',tap('r'));
+})();
 </script>
 </body>
 </html>
