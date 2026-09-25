@@ -29,6 +29,13 @@
       "when": 1790124951387,
       "tag": "0003_accounts_games_codes_vip",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790299682922,
+      "tag": "0004_spam_equip_delete_own",
+      "breakpoints": true
     }
   ]
 }
