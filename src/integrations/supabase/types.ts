@@ -421,6 +421,11 @@ export type Database = {
         Args: { _actor: string; _message: string }
         Returns: undefined
       }
+      delete_own_message: {
+        Args: { _message: string; _user: string }
+        Returns: undefined
+      }
+      equip_item: { Args: { _item: string; _user: string }; Returns: undefined }
       game_settle: {
         Args: { _bet: number; _payout: number; _user: string; _won: boolean }
         Returns: number
@@ -487,6 +492,7 @@ export type Database = {
       }
       play_slots: { Args: { _user: string; bet: number }; Returns: Json }
       redeem_code: { Args: { _code: string; _user: string }; Returns: Json }
+      reset_font: { Args: { _user: string }; Returns: undefined }
       signup_user: {
         Args: { _password: string; _username: string }
         Returns: {
