@@ -368,6 +368,32 @@ function Clubhouse() {
     toast.success(`${modTarget.username} — ${action}d`);
   }
 
+  async function grantCoins() {
+    if (!user) return;
+    if (!modTarget) {
+      toast.error("Tap a name in chat to pick someone first");
+      return;
+    }
+    const input = window.prompt(`How many coins to give ${modTarget.username}? (max 100,000)`);
+    if (!input) return;
+    const amount = parseInt(input, 10);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    const { error } = await supabase.rpc("mod_grant_coins", {
+      _actor: user.id,
+      _target: modTarget.id,
+      _amount: amount,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Gave ◈${amount.toLocaleString()} to ${modTarget.username}`);
+    qc.invalidateQueries({ queryKey: ["profiles"] });
+  }
+
   async function becomeMod() {
     if (!user) return;
     const code = window.prompt("Enter the moderator code");
@@ -996,6 +1022,12 @@ function Clubhouse() {
                       {action}
                     </button>
                   ))}
+                  <button
+                    onClick={grantCoins}
+                    className="col-span-2 rounded-lg bg-gold/10 px-3 py-2 text-xs font-medium text-gold ring-1 ring-gold/25 transition-colors hover:bg-gold/20"
+                  >
+                    ◈ grant coins
+                  </button>
                 </div>
               </div>
             )}
