@@ -319,7 +319,7 @@ function Clubhouse() {
   async function equip(itemId: string) {
     if (!user) return;
     const { error } = await supabase.rpc("equip_item", { _user: user.id, _item: itemId });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Equipped");
     refreshAll();
   }
@@ -330,7 +330,7 @@ function Clubhouse() {
       kind === "font"
         ? await supabase.rpc("reset_font", { _user: user.id })
         : await supabase.rpc("equip_item", { _user: user.id, _item: null as unknown as string });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Back to default");
     refreshAll();
   }
