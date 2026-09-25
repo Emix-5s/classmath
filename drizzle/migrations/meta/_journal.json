@@ -36,6 +36,13 @@
       "when": 1790299682922,
       "tag": "0004_spam_equip_delete_own",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790299953978,
+      "tag": "0005_mod_grant_coins",
+      "breakpoints": true
     }
   ]
 }
