@@ -389,10 +389,15 @@ function Clubhouse() {
       toast.error("Tap a name in chat to pick someone first");
       return;
     }
-    const input = window.prompt(`How many coins to give ${modTarget.username}? (max 100,000)`);
+    const cap = GRANT_CAP[lvl] ?? 0;
+    const input = window.prompt(
+      `How many coins for ${modTarget.username}? (up to ${cap.toLocaleString()}${
+        lvl >= 3 ? ", use a minus sign to take coins away" : ""
+      })`,
+    );
     if (!input) return;
     const amount = parseInt(input, 10);
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount === 0) {
       toast.error("Enter a valid amount");
       return;
     }
@@ -405,8 +410,89 @@ function Clubhouse() {
       toast.error(error.message);
       return;
     }
-    toast.success(`Gave ◈${amount.toLocaleString()} to ${modTarget.username}`);
-    qc.invalidateQueries({ queryKey: ["profiles"] });
+    toast.success(
+      `${amount > 0 ? "Gave" : "Took"} ◈${Math.abs(amount).toLocaleString()} ${
+        amount > 0 ? "to" : "from"
+      } ${modTarget.username}`,
+    );
+    qc.invalidateQueries({ queryKey: ["profile"] });
+  }
+
+  function requireTarget() {
+    if (!modTarget) {
+      toast.error("Tap a name in chat to pick someone first");
+      return false;
+    }
+    return true;
+  }
+
+  async function purgeMessages() {
+    if (!user || !requireTarget()) return;
+    const { data, error } = await supabase.rpc("purge_user_messages", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _minutes: 60,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`Cleared ${data} of ${modTarget!.username}'s recent messages`);
+    qc.invalidateQueries({ queryKey: ["messages"] });
+  }
+
+  async function resetLook() {
+    if (!user || !requireTarget()) return;
+    const { error } = await supabase.rpc("staff_reset_look", {
+      _actor: user.id,
+      _target: modTarget!.id,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`${modTarget!.username} reset to the default look`);
+    qc.invalidateQueries({ queryKey: ["messages"] });
+  }
+
+  async function setRank(rank: string) {
+    if (!user || !requireTarget()) return;
+    const { error } = await supabase.rpc("staff_set_rank", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _rank: rank,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`${modTarget!.username} is now ${rank.replace("_", " ")}`);
+    qc.invalidateQueries({ queryKey: ["staff-roles"] });
+    qc.invalidateQueries({ queryKey: ["my-rank"] });
+  }
+
+  async function ipBan() {
+    if (!user || !requireTarget()) return;
+    const reason = window.prompt(`Reason for blocking ${modTarget!.username}'s address?`) ?? "";
+    const { data, error } = await supabase.rpc("staff_ip_ban", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _reason: reason,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`Blocked ${data}`);
+    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+  }
+
+  async function ipUnban(ip: string) {
+    if (!user) return;
+    const { error } = await supabase.rpc("staff_ip_unban", { _actor: user.id, _ip: ip });
+    if (error) return void toast.error(error.message);
+    toast.success(`Unblocked ${ip}`);
+    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+  }
+
+  async function wipeRoom() {
+    if (!user || !room) return;
+    if (!window.confirm(`Clear every message in ${room.name}?`)) return;
+    const { data, error } = await supabase.rpc("staff_wipe_room", {
+      _actor: user.id,
+      _room: room.id,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`Cleared ${data} messages`);
+    qc.invalidateQueries({ queryKey: ["messages"] });
   }
 
   async function becomeMod() {
@@ -419,8 +505,10 @@ function Clubhouse() {
       return;
     }
     toast.success("Moderator powers unlocked");
-    qc.invalidateQueries({ queryKey: ["is-mod"] });
+    qc.invalidateQueries({ queryKey: ["my-rank"] });
+    qc.invalidateQueries({ queryKey: ["staff-roles"] });
   }
+
 
   if (loading) {
     return <div className="min-h-screen bg-background" />;
