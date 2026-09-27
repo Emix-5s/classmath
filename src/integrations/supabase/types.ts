@@ -109,6 +109,30 @@ export type Database = {
           },
         ]
       }
+      ip_bans: {
+        Row: {
+          banned_by: string | null
+          created_at: string
+          id: string
+          ip: string
+          reason: string
+        }
+        Insert: {
+          banned_by?: string | null
+          created_at?: string
+          id?: string
+          ip: string
+          reason?: string
+        }
+        Update: {
+          banned_by?: string | null
+          created_at?: string
+          id?: string
+          ip?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -159,6 +183,7 @@ export type Database = {
           font_key: string
           id: string
           last_claim_at: string | null
+          last_ip: string | null
           level: number
           muted_until: string | null
           name_color: string
@@ -174,6 +199,7 @@ export type Database = {
           font_key?: string
           id: string
           last_claim_at?: string | null
+          last_ip?: string | null
           level?: number
           muted_until?: string | null
           name_color?: string
@@ -189,6 +215,7 @@ export type Database = {
           font_key?: string
           id?: string
           last_claim_at?: string | null
+          last_ip?: string | null
           level?: number
           muted_until?: string | null
           name_color?: string
@@ -277,6 +304,33 @@ export type Database = {
           rarity?: string
           sort_order?: number
           value?: string
+        }
+        Relationships: []
+      }
+      staff_log: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          detail: string
+          id: string
+          target: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          detail?: string
+          id?: string
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          detail?: string
+          id?: string
+          target?: string | null
         }
         Relationships: []
       }
@@ -402,6 +456,7 @@ export type Database = {
           font_key: string
           id: string
           last_claim_at: string | null
+          last_ip: string | null
           level: number
           muted_until: string | null
           name_color: string
@@ -446,6 +501,7 @@ export type Database = {
           font_key: string
           id: string
           last_claim_at: string | null
+          last_ip: string | null
           level: number
           muted_until: string | null
           name_color: string
@@ -491,6 +547,13 @@ export type Database = {
         Returns: Json
       }
       play_slots: { Args: { _user: string; bet: number }; Returns: Json }
+      purge_user_messages: {
+        Args: { _actor: string; _minutes?: number; _target: string }
+        Returns: number
+      }
+      rank_level: { Args: { _user: string }; Returns: number }
+      rank_name: { Args: { _user: string }; Returns: string }
+      record_ip: { Args: { _ip: string; _user: string }; Returns: boolean }
       redeem_code: { Args: { _code: string; _user: string }; Returns: Json }
       reset_font: { Args: { _user: string }; Returns: undefined }
       signup_user: {
@@ -502,6 +565,7 @@ export type Database = {
           font_key: string
           id: string
           last_claim_at: string | null
+          last_ip: string | null
           level: number
           muted_until: string | null
           name_color: string
@@ -516,6 +580,26 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      staff_ip_ban: {
+        Args: { _actor: string; _reason?: string; _target: string }
+        Returns: string
+      }
+      staff_ip_unban: {
+        Args: { _actor: string; _ip: string }
+        Returns: undefined
+      }
+      staff_reset_look: {
+        Args: { _actor: string; _target: string }
+        Returns: undefined
+      }
+      staff_set_rank: {
+        Args: { _actor: string; _rank: string; _target: string }
+        Returns: undefined
+      }
+      staff_wipe_room: {
+        Args: { _actor: string; _room: string }
+        Returns: number
       }
       vip_max_bet: { Args: { _tier: string }; Returns: number }
       vip_mult: { Args: { _tier: string }; Returns: number }
