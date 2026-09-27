@@ -73,18 +73,31 @@ function Clubhouse() {
     },
   });
 
-  const isMod = useQuery({
-    queryKey: ["is-mod", user?.id],
+  const myRank = useQuery({
+    queryKey: ["my-rank", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user!.id);
+      const { data, error } = await supabase.rpc("rank_level", { _user: user!.id });
       if (error) throw error;
-      return (data ?? []).some((r) => r.role === "mod" || r.role === "admin");
+      return (data as number) ?? 0;
     },
   });
+  const lvl = myRank.data ?? 0;
+
+  const staffRoles = useQuery({
+    queryKey: ["staff-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id, role");
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const v = RANK_LEVEL[r.role as string] ?? 0;
+        if (v > (map[r.user_id] ?? 0)) map[r.user_id] = v;
+      }
+      return map;
+    },
+  });
+
 
   const rooms = useQuery({
     queryKey: ["rooms"],
