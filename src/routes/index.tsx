@@ -1156,36 +1156,143 @@ function Clubhouse() {
               </div>
             </div>
 
-            {/* mod tools */}
-            {isMod.data && (
-              <div className="rounded-2xl border border-mod/20 bg-mod/[0.06] p-4 backdrop-blur-xl">
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="rounded bg-mod/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-mod">
-                    MOD
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
-                    {modTarget ? modTarget.username : "tools"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["mute", "unmute", "ban", "unban"] as const).map((action) => (
-                    <button
-                      key={action}
-                      onClick={() => modAct(action)}
-                      className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+            {/* staff tools */}
+            {lvl >= 1 && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-mod/20 bg-mod/[0.06] p-4 backdrop-blur-xl">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span
+                      className={`rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${rankInfo(lvl)!.className}`}
                     >
-                      {action}
+                      {rankInfo(lvl)!.short}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                      {modTarget ? modTarget.username : "pick a name in chat"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["mute", "unmute", "ban", "unban"] as const).map((action) => (
+                      <button
+                        key={action}
+                        onClick={() => modAct(action)}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        {action}
+                      </button>
+                    ))}
+                    <button
+                      onClick={grantCoins}
+                      className="col-span-2 rounded-lg bg-gold/10 px-3 py-2 text-xs font-medium text-gold ring-1 ring-gold/25 transition-colors hover:bg-gold/20"
+                    >
+                      ◈ grant coins · up to {(GRANT_CAP[lvl] ?? 0).toLocaleString()}
                     </button>
-                  ))}
-                  <button
-                    onClick={grantCoins}
-                    className="col-span-2 rounded-lg bg-gold/10 px-3 py-2 text-xs font-medium text-gold ring-1 ring-gold/25 transition-colors hover:bg-gold/20"
-                  >
-                    ◈ grant coins
-                  </button>
+                  </div>
                 </div>
+
+                {lvl >= 2 && (
+                  <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.07] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-violet-300">
+                      Super mod tools
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        onClick={purgeMessages}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        purge their last hour of messages
+                      </button>
+                      <button
+                        onClick={resetLook}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        reset their colour and font
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 3 && (
+                  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-amber-300">
+                      Co-owner tools
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          ["member", "remove rank"],
+                          ["mod", "make mod"],
+                          ["super_mod", "make super mod"],
+                          ["co_owner", "make co-owner"],
+                        ] as const
+                      )
+                        .filter(([rank]) => lvl >= 4 || rank !== "co_owner")
+                        .map(([rank, label]) => (
+                          <button
+                            key={rank}
+                            onClick={() => setRank(rank)}
+                            className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 4 && (
+                  <div className="rounded-2xl border border-rose-400/25 bg-rose-500/[0.07] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-rose-300">
+                      Owner console
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        onClick={() => setRank("owner")}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        make owner
+                      </button>
+                      <button
+                        onClick={ipBan}
+                        className="rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-medium text-rose-200 ring-1 ring-rose-400/30 transition-colors hover:bg-rose-500/25"
+                      >
+                        block their device address
+                      </button>
+                      <button
+                        onClick={wipeRoom}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        clear this room
+                      </button>
+                    </div>
+                    {(ipBans.data ?? []).length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                          Blocked addresses
+                        </div>
+                        {(ipBans.data ?? []).map((b) => (
+                          <div key={b.id} className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground/80">
+                              {b.ip}
+                            </span>
+                            <button
+                              onClick={() => ipUnban(b.ip)}
+                              className="font-mono text-[10px] uppercase tracking-wider text-rose-300 hover:opacity-80"
+                            >
+                              unblock
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-3 font-mono text-[10px] leading-relaxed text-mist">
+                      Browsers never expose a device's hardware address, so blocks use the network
+                      address the member last connected from.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
+
           </aside>
         </div>
       </div>
