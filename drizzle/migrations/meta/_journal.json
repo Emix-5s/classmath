@@ -43,6 +43,20 @@
       "when": 1790299953978,
       "tag": "0005_mod_grant_coins",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790523871617,
+      "tag": "0006_add_staff_ranks_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790523921899,
+      "tag": "0007_staff_rank_tools",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount, perksFor } from "@/lib/account";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
+import { RANK_LEVEL, rankInfo, rankLabel, GRANT_CAP } from "@/lib/ranks";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -73,18 +75,31 @@ function Clubhouse() {
     },
   });
 
-  const isMod = useQuery({
-    queryKey: ["is-mod", user?.id],
+  const myRank = useQuery({
+    queryKey: ["my-rank", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user!.id);
+      const { data, error } = await supabase.rpc("rank_level", { _user: user!.id });
       if (error) throw error;
-      return (data ?? []).some((r) => r.role === "mod" || r.role === "admin");
+      return (data as number) ?? 0;
     },
   });
+  const lvl = myRank.data ?? 0;
+
+  const staffRoles = useQuery({
+    queryKey: ["staff-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id, role");
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const v = RANK_LEVEL[r.role as string] ?? 0;
+        if (v > (map[r.user_id] ?? 0)) map[r.user_id] = v;
+      }
+      return map;
+    },
+  });
+
 
   const rooms = useQuery({
     queryKey: ["rooms"],
@@ -176,6 +191,42 @@ function Clubhouse() {
       }));
     },
   });
+
+  const ipBans = useQuery({
+    queryKey: ["ip-bans"],
+    enabled: lvl >= 4,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ip_bans")
+        .select("id, ip, reason")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/public/whoami");
+        const { ip } = (await res.json()) as { ip: string };
+        if (!ip || cancelled) return;
+        const { data } = await supabase.rpc("record_ip", { _user: user.id, _ip: ip });
+        if (data === true && !cancelled) {
+          toast.error("This device is blocked from the clubhouse");
+          signOut();
+        }
+      } catch {
+        /* address check is best effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, signOut]);
+
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["profile"] });
@@ -374,10 +425,15 @@ function Clubhouse() {
       toast.error("Tap a name in chat to pick someone first");
       return;
     }
-    const input = window.prompt(`How many coins to give ${modTarget.username}? (max 100,000)`);
+    const cap = GRANT_CAP[lvl] ?? 0;
+    const input = window.prompt(
+      `How many coins for ${modTarget.username}? (up to ${cap.toLocaleString()}${
+        lvl >= 3 ? ", use a minus sign to take coins away" : ""
+      })`,
+    );
     if (!input) return;
     const amount = parseInt(input, 10);
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount === 0) {
       toast.error("Enter a valid amount");
       return;
     }
@@ -390,8 +446,89 @@ function Clubhouse() {
       toast.error(error.message);
       return;
     }
-    toast.success(`Gave ◈${amount.toLocaleString()} to ${modTarget.username}`);
-    qc.invalidateQueries({ queryKey: ["profiles"] });
+    toast.success(
+      `${amount > 0 ? "Gave" : "Took"} ◈${Math.abs(amount).toLocaleString()} ${
+        amount > 0 ? "to" : "from"
+      } ${modTarget.username}`,
+    );
+    qc.invalidateQueries({ queryKey: ["profile"] });
+  }
+
+  function requireTarget() {
+    if (!modTarget) {
+      toast.error("Tap a name in chat to pick someone first");
+      return false;
+    }
+    return true;
+  }
+
+  async function purgeMessages() {
+    if (!user || !requireTarget()) return;
+    const { data, error } = await supabase.rpc("purge_user_messages", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _minutes: 60,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`Cleared ${data} of ${modTarget!.username}'s recent messages`);
+    qc.invalidateQueries({ queryKey: ["messages"] });
+  }
+
+  async function resetLook() {
+    if (!user || !requireTarget()) return;
+    const { error } = await supabase.rpc("staff_reset_look", {
+      _actor: user.id,
+      _target: modTarget!.id,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`${modTarget!.username} reset to the default look`);
+    qc.invalidateQueries({ queryKey: ["messages"] });
+  }
+
+  async function setRank(rank: string) {
+    if (!user || !requireTarget()) return;
+    const { error } = await supabase.rpc("staff_set_rank", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _rank: rank,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`${modTarget!.username} is now ${rank.replace("_", " ")}`);
+    qc.invalidateQueries({ queryKey: ["staff-roles"] });
+    qc.invalidateQueries({ queryKey: ["my-rank"] });
+  }
+
+  async function ipBan() {
+    if (!user || !requireTarget()) return;
+    const reason = window.prompt(`Reason for blocking ${modTarget!.username}'s address?`) ?? "";
+    const { data, error } = await supabase.rpc("staff_ip_ban", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _reason: reason,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`Blocked ${data}`);
+    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+  }
+
+  async function ipUnban(ip: string) {
+    if (!user) return;
+    const { error } = await supabase.rpc("staff_ip_unban", { _actor: user.id, _ip: ip });
+    if (error) return void toast.error(error.message);
+    toast.success(`Unblocked ${ip}`);
+    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+  }
+
+  async function wipeRoom() {
+    if (!user || !room) return;
+    if (!window.confirm(`Clear every message in ${room.name}?`)) return;
+    const { data, error } = await supabase.rpc("staff_wipe_room", {
+      _actor: user.id,
+      _room: room.id,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(`Cleared ${data} messages`);
+    qc.invalidateQueries({ queryKey: ["messages"] });
   }
 
   async function becomeMod() {
@@ -404,8 +541,10 @@ function Clubhouse() {
       return;
     }
     toast.success("Moderator powers unlocked");
-    qc.invalidateQueries({ queryKey: ["is-mod"] });
+    qc.invalidateQueries({ queryKey: ["my-rank"] });
+    qc.invalidateQueries({ queryKey: ["staff-roles"] });
   }
+
 
   if (loading) {
     return <div className="min-h-screen bg-background" />;
@@ -528,7 +667,15 @@ function Clubhouse() {
               </span>
               <span className="font-display text-sm font-bold">{p?.level ?? 1}</span>
             </div>
-            {!isMod.data && (
+            {rankInfo(lvl) && (
+              <span
+                className={`hidden rounded-full px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider sm:inline ${rankInfo(lvl)!.className}`}
+              >
+                {rankInfo(lvl)!.short}
+              </span>
+            )}
+            {lvl < 1 && (
+
               <button
                 onClick={becomeMod}
                 className="rounded-full bg-mod/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-mod ring-1 ring-mod/30 transition-colors hover:bg-mod/20"
@@ -572,7 +719,7 @@ function Clubhouse() {
                     {p?.username ?? "…"}
                   </div>
                   <div className="font-mono text-[11px] text-mist">
-                    {isMod.data ? "rank · moderator" : "rank · member"}
+                    rank · {rankLabel(lvl).toLowerCase()}
                   </div>
                 </div>
               </div>
@@ -594,7 +741,7 @@ function Clubhouse() {
               </div>
               <div className="space-y-1.5 text-sm">
                 {(rooms.data ?? [])
-                  .filter((r) => !r.mod_only || isMod.data)
+                  .filter((r) => !r.mod_only || lvl >= 1)
                   .map((r) => (
                     <button
                       key={r.id}
@@ -682,7 +829,15 @@ function Clubhouse() {
                                 {author.vip_tier}
                               </span>
                             )}
-                            {(isMod.data || m.user_id === currentUserId) && !m.deleted && (
+                            {rankInfo(staffRoles.data?.[m.user_id] ?? 0) && (
+                              <span
+                                className={`rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ${rankInfo(staffRoles.data![m.user_id]!)!.className}`}
+                              >
+                                {rankInfo(staffRoles.data![m.user_id]!)!.short}
+                              </span>
+                            )}
+                            {(lvl >= 1 || m.user_id === currentUserId) && !m.deleted && (
+
                               <button
                                 onClick={async () => {
                                   const { error } =
@@ -1001,36 +1156,143 @@ function Clubhouse() {
               </div>
             </div>
 
-            {/* mod tools */}
-            {isMod.data && (
-              <div className="rounded-2xl border border-mod/20 bg-mod/[0.06] p-4 backdrop-blur-xl">
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="rounded bg-mod/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-mod">
-                    MOD
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
-                    {modTarget ? modTarget.username : "tools"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["mute", "unmute", "ban", "unban"] as const).map((action) => (
-                    <button
-                      key={action}
-                      onClick={() => modAct(action)}
-                      className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+            {/* staff tools */}
+            {lvl >= 1 && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-mod/20 bg-mod/[0.06] p-4 backdrop-blur-xl">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span
+                      className={`rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${rankInfo(lvl)!.className}`}
                     >
-                      {action}
+                      {rankInfo(lvl)!.short}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mist">
+                      {modTarget ? modTarget.username : "pick a name in chat"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["mute", "unmute", "ban", "unban"] as const).map((action) => (
+                      <button
+                        key={action}
+                        onClick={() => modAct(action)}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium capitalize ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        {action}
+                      </button>
+                    ))}
+                    <button
+                      onClick={grantCoins}
+                      className="col-span-2 rounded-lg bg-gold/10 px-3 py-2 text-xs font-medium text-gold ring-1 ring-gold/25 transition-colors hover:bg-gold/20"
+                    >
+                      ◈ grant coins · up to {(GRANT_CAP[lvl] ?? 0).toLocaleString()}
                     </button>
-                  ))}
-                  <button
-                    onClick={grantCoins}
-                    className="col-span-2 rounded-lg bg-gold/10 px-3 py-2 text-xs font-medium text-gold ring-1 ring-gold/25 transition-colors hover:bg-gold/20"
-                  >
-                    ◈ grant coins
-                  </button>
+                  </div>
                 </div>
+
+                {lvl >= 2 && (
+                  <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.07] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-violet-300">
+                      Super mod tools
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        onClick={purgeMessages}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        purge their last hour of messages
+                      </button>
+                      <button
+                        onClick={resetLook}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        reset their colour and font
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 3 && (
+                  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-amber-300">
+                      Co-owner tools
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          ["member", "remove rank"],
+                          ["mod", "make mod"],
+                          ["super_mod", "make super mod"],
+                          ["co_owner", "make co-owner"],
+                        ] as const
+                      )
+                        .filter(([rank]) => lvl >= 4 || rank !== "co_owner")
+                        .map(([rank, label]) => (
+                          <button
+                            key={rank}
+                            onClick={() => setRank(rank)}
+                            className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 4 && (
+                  <div className="rounded-2xl border border-rose-400/25 bg-rose-500/[0.07] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-rose-300">
+                      Owner console
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        onClick={() => setRank("owner")}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        make owner
+                      </button>
+                      <button
+                        onClick={ipBan}
+                        className="rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-medium text-rose-200 ring-1 ring-rose-400/30 transition-colors hover:bg-rose-500/25"
+                      >
+                        block their device address
+                      </button>
+                      <button
+                        onClick={wipeRoom}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        clear this room
+                      </button>
+                    </div>
+                    {(ipBans.data ?? []).length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                          Blocked addresses
+                        </div>
+                        {(ipBans.data ?? []).map((b) => (
+                          <div key={b.id} className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground/80">
+                              {b.ip}
+                            </span>
+                            <button
+                              onClick={() => ipUnban(b.ip)}
+                              className="font-mono text-[10px] uppercase tracking-wider text-rose-300 hover:opacity-80"
+                            >
+                              unblock
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-3 font-mono text-[10px] leading-relaxed text-mist">
+                      Browsers never expose a device's hardware address, so blocks use the network
+                      address the member last connected from.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
+
           </aside>
         </div>
       </div>
