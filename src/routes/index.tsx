@@ -667,7 +667,15 @@ function Clubhouse() {
               </span>
               <span className="font-display text-sm font-bold">{p?.level ?? 1}</span>
             </div>
-            {!isMod.data && (
+            {rankInfo(lvl) && (
+              <span
+                className={`hidden rounded-full px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider sm:inline ${rankInfo(lvl)!.className}`}
+              >
+                {rankInfo(lvl)!.short}
+              </span>
+            )}
+            {lvl < 1 && (
+
               <button
                 onClick={becomeMod}
                 className="rounded-full bg-mod/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-mod ring-1 ring-mod/30 transition-colors hover:bg-mod/20"
@@ -711,7 +719,7 @@ function Clubhouse() {
                     {p?.username ?? "…"}
                   </div>
                   <div className="font-mono text-[11px] text-mist">
-                    {isMod.data ? "rank · moderator" : "rank · member"}
+                    rank · {rankLabel(lvl).toLowerCase()}
                   </div>
                 </div>
               </div>
@@ -733,7 +741,7 @@ function Clubhouse() {
               </div>
               <div className="space-y-1.5 text-sm">
                 {(rooms.data ?? [])
-                  .filter((r) => !r.mod_only || isMod.data)
+                  .filter((r) => !r.mod_only || lvl >= 1)
                   .map((r) => (
                     <button
                       key={r.id}
