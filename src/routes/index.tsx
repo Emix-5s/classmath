@@ -829,7 +829,15 @@ function Clubhouse() {
                                 {author.vip_tier}
                               </span>
                             )}
-                            {(isMod.data || m.user_id === currentUserId) && !m.deleted && (
+                            {rankInfo(staffRoles.data?.[m.user_id] ?? 0) && (
+                              <span
+                                className={`rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ${rankInfo(staffRoles.data![m.user_id]!)!.className}`}
+                              >
+                                {rankInfo(staffRoles.data![m.user_id]!)!.short}
+                              </span>
+                            )}
+                            {(lvl >= 1 || m.user_id === currentUserId) && !m.deleted && (
+
                               <button
                                 onClick={async () => {
                                   const { error } =
