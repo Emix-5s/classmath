@@ -192,6 +192,42 @@ function Clubhouse() {
     },
   });
 
+  const ipBans = useQuery({
+    queryKey: ["ip-bans"],
+    enabled: lvl >= 4,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ip_bans")
+        .select("id, ip, reason")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/public/whoami");
+        const { ip } = (await res.json()) as { ip: string };
+        if (!ip || cancelled) return;
+        const { data } = await supabase.rpc("record_ip", { _user: user.id, _ip: ip });
+        if (data === true && !cancelled) {
+          toast.error("This device is blocked from the clubhouse");
+          signOut();
+        }
+      } catch {
+        /* address check is best effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, signOut]);
+
+
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["profile"] });
     qc.invalidateQueries({ queryKey: ["inventory"] });
