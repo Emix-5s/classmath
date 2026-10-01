@@ -80,6 +80,30 @@ export type Database = {
           },
         ]
       }
+      device_bans: {
+        Row: {
+          banned_by: string | null
+          created_at: string
+          device_id: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          banned_by?: string | null
+          created_at?: string
+          device_id: string
+          id?: string
+          reason?: string
+        }
+        Update: {
+          banned_by?: string | null
+          created_at?: string
+          device_id?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           created_at: string
@@ -180,6 +204,7 @@ export type Database = {
           banned: boolean
           coins: number
           created_at: string
+          device_id: string | null
           font_key: string
           id: string
           last_claim_at: string | null
@@ -196,6 +221,7 @@ export type Database = {
           banned?: boolean
           coins?: number
           created_at?: string
+          device_id?: string | null
           font_key?: string
           id: string
           last_claim_at?: string | null
@@ -212,6 +238,7 @@ export type Database = {
           banned?: boolean
           coins?: number
           created_at?: string
+          device_id?: string | null
           font_key?: string
           id?: string
           last_claim_at?: string | null
@@ -453,6 +480,7 @@ export type Database = {
           banned: boolean
           coins: number
           created_at: string
+          device_id: string | null
           font_key: string
           id: string
           last_claim_at: string | null
@@ -498,6 +526,7 @@ export type Database = {
           banned: boolean
           coins: number
           created_at: string
+          device_id: string | null
           font_key: string
           id: string
           last_claim_at: string | null
@@ -526,10 +555,15 @@ export type Database = {
         }
         Returns: undefined
       }
-      mod_grant_coins: {
-        Args: { _actor: string; _amount: number; _target: string }
-        Returns: undefined
-      }
+      mod_grant_coins:
+        | {
+            Args: { _actor: string; _amount: number; _target: string }
+            Returns: undefined
+          }
+        | {
+            Args: { _actor: string; _amount: number; _target: string }
+            Returns: undefined
+          }
       play_coin_flip: {
         Args: { _user: string; bet: number; guess: string }
         Returns: Json
@@ -553,6 +587,10 @@ export type Database = {
       }
       rank_level: { Args: { _user: string }; Returns: number }
       rank_name: { Args: { _user: string }; Returns: string }
+      record_device: {
+        Args: { _device: string; _user: string }
+        Returns: boolean
+      }
       record_ip: { Args: { _ip: string; _user: string }; Returns: boolean }
       redeem_code: { Args: { _code: string; _user: string }; Returns: Json }
       reset_font: { Args: { _user: string }; Returns: undefined }
@@ -562,6 +600,7 @@ export type Database = {
           banned: boolean
           coins: number
           created_at: string
+          device_id: string | null
           font_key: string
           id: string
           last_claim_at: string | null
@@ -581,6 +620,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      staff_device_ban: {
+        Args: { _actor: string; _reason?: string; _target: string }
+        Returns: string
+      }
+      staff_device_mute: {
+        Args: { _actor: string; _minutes?: number; _target: string }
+        Returns: number
+      }
+      staff_device_unban: {
+        Args: { _actor: string; _device: string }
+        Returns: undefined
+      }
       staff_ip_ban: {
         Args: { _actor: string; _reason?: string; _target: string }
         Returns: string
@@ -593,6 +644,16 @@ export type Database = {
         Args: { _actor: string; _target: string }
         Returns: undefined
       }
+      staff_set_identity: {
+        Args: {
+          _actor: string
+          _color: string
+          _font: string
+          _target: string
+          _username: string
+        }
+        Returns: undefined
+      }
       staff_set_rank: {
         Args: { _actor: string; _rank: string; _target: string }
         Returns: undefined
@@ -600,6 +661,10 @@ export type Database = {
       staff_wipe_room: {
         Args: { _actor: string; _room: string }
         Returns: number
+      }
+      ton618_delete_all: {
+        Args: { _actor: string; _target: string }
+        Returns: Json
       }
       vip_max_bet: { Args: { _tier: string }; Returns: number }
       vip_mult: { Args: { _tier: string }; Returns: number }

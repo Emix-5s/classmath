@@ -64,6 +64,13 @@
       "when": 1790851457789,
       "tag": "0008_add_coverstar_ton618_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790851509083,
+      "tag": "0009_supreme_ranks_hwid_delete_all",
+      "breakpoints": true
     }
   ]
 }
