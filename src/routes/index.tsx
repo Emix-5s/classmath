@@ -192,13 +192,13 @@ function Clubhouse() {
     },
   });
 
-  const ipBans = useQuery({
-    queryKey: ["ip-bans"],
+  const deviceBans = useQuery({
+    queryKey: ["device-bans"],
     enabled: lvl >= 4,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ip_bans")
-        .select("id, ip, reason")
+        .from("device_bans")
+        .select("id, device_id, reason")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -210,16 +210,15 @@ function Clubhouse() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/public/whoami");
-        const { ip } = (await res.json()) as { ip: string };
-        if (!ip || cancelled) return;
-        const { data } = await supabase.rpc("record_ip", { _user: user.id, _ip: ip });
+        const dev = deviceId();
+        if (!dev) return;
+        const { data } = await supabase.rpc("record_device", { _user: user.id, _device: dev });
         if (data === true && !cancelled) {
-          toast.error("This device is blocked from the clubhouse");
+          toast.error("This device has been banned from the clubhouse");
           signOut();
         }
       } catch {
-        /* address check is best effort */
+        /* device check is best effort */
       }
     })();
     return () => {
