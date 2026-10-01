@@ -78,6 +78,13 @@
       "when": 1790851532015,
       "tag": "0010_grant_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790851636818,
+      "tag": "0011_set_rank_supreme",
+      "breakpoints": true
     }
   ]
 }
