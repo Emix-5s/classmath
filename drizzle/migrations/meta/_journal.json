@@ -71,6 +71,13 @@
       "when": 1790851509083,
       "tag": "0009_supreme_ranks_hwid_delete_all",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790851532015,
+      "tag": "0010_grant_cleanup",
+      "breakpoints": true
     }
   ]
 }
