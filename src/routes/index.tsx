@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAccount, perksFor } from "@/lib/account";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
 import { RANK_LEVEL, rankInfo, rankLabel, GRANT_CAP } from "@/lib/ranks";
+import { deviceId } from "@/lib/hwid";
 
 
 export const Route = createFileRoute("/")({
@@ -192,13 +193,13 @@ function Clubhouse() {
     },
   });
 
-  const ipBans = useQuery({
-    queryKey: ["ip-bans"],
+  const deviceBans = useQuery({
+    queryKey: ["device-bans"],
     enabled: lvl >= 4,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ip_bans")
-        .select("id, ip, reason")
+        .from("device_bans")
+        .select("id, device_id, reason")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -210,16 +211,15 @@ function Clubhouse() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/public/whoami");
-        const { ip } = (await res.json()) as { ip: string };
-        if (!ip || cancelled) return;
-        const { data } = await supabase.rpc("record_ip", { _user: user.id, _ip: ip });
+        const dev = deviceId();
+        if (!dev) return;
+        const { data } = await supabase.rpc("record_device", { _user: user.id, _device: dev });
         if (data === true && !cancelled) {
-          toast.error("This device is blocked from the clubhouse");
+          toast.error("This device has been banned from the clubhouse");
           signOut();
         }
       } catch {
-        /* address check is best effort */
+        /* device check is best effort */
       }
     })();
     return () => {
@@ -498,25 +498,73 @@ function Clubhouse() {
     qc.invalidateQueries({ queryKey: ["my-rank"] });
   }
 
-  async function ipBan() {
+  async function deviceBan() {
     if (!user || !requireTarget()) return;
-    const reason = window.prompt(`Reason for blocking ${modTarget!.username}'s address?`) ?? "";
-    const { data, error } = await supabase.rpc("staff_ip_ban", {
+    const reason = window.prompt(`Reason for banning ${modTarget!.username}'s device?`) ?? "";
+    const { data, error } = await supabase.rpc("staff_device_ban", {
       _actor: user.id,
       _target: modTarget!.id,
       _reason: reason,
     });
     if (error) return void toast.error(error.message);
-    toast.success(`Blocked ${data}`);
-    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+    toast.success(`Device ${data} banned`);
+    qc.invalidateQueries({ queryKey: ["device-bans"] });
   }
 
-  async function ipUnban(ip: string) {
-    if (!user) return;
-    const { error } = await supabase.rpc("staff_ip_unban", { _actor: user.id, _ip: ip });
+  async function deviceMute() {
+    if (!user || !requireTarget()) return;
+    const { data, error } = await supabase.rpc("staff_device_mute", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _minutes: 60,
+    });
     if (error) return void toast.error(error.message);
-    toast.success(`Unblocked ${ip}`);
-    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+    toast.success(`Muted ${data} account(s) on that device for an hour`);
+  }
+
+  async function setIdentity() {
+    if (!user || !requireTarget()) return;
+    const username = window.prompt(`New name for ${modTarget!.username}? (blank to keep)`) ?? "";
+    const color = window.prompt("New name colour, e.g. #ff3b81 (blank to keep)") ?? "";
+    const font = window.prompt("New font key, e.g. body / mono / display (blank to keep)") ?? "";
+    if (!username && !color && !font) return;
+    const { error } = await supabase.rpc("staff_set_identity", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _username: username,
+      _color: color,
+      _font: font,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success("Identity updated");
+    qc.invalidateQueries({ queryKey: ["messages"] });
+    qc.invalidateQueries({ queryKey: ["profile"] });
+  }
+
+  async function deleteAll() {
+    if (!user || !requireTarget()) return;
+    const name = modTarget!.username;
+    if (!window.confirm(`DELETE ALL for ${name}? Account, every message, and a device ban.`)) return;
+    if (window.prompt(`Type ${name} to confirm`) !== name) return;
+    const { data, error } = await supabase.rpc("ton618_delete_all", {
+      _actor: user.id,
+      _target: modTarget!.id,
+    });
+    if (error) return void toast.error(error.message);
+    const res = data as { username: string; messages: number };
+    toast.success(`${res.username} erased — ${res.messages} messages removed`);
+    setModTarget(null);
+    qc.invalidateQueries({ queryKey: ["messages"] });
+    qc.invalidateQueries({ queryKey: ["staff-roles"] });
+    qc.invalidateQueries({ queryKey: ["device-bans"] });
+  }
+
+  async function deviceUnban(device: string) {
+    if (!user) return;
+    const { error } = await supabase.rpc("staff_device_unban", { _actor: user.id, _device: device });
+    if (error) return void toast.error(error.message);
+    toast.success("Device unbanned");
+    qc.invalidateQueries({ queryKey: ["device-bans"] });
   }
 
   async function wipeRoom() {
@@ -1252,10 +1300,16 @@ function Clubhouse() {
                         make owner
                       </button>
                       <button
-                        onClick={ipBan}
+                        onClick={deviceBan}
                         className="rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-medium text-rose-200 ring-1 ring-rose-400/30 transition-colors hover:bg-rose-500/25"
                       >
-                        block their device address
+                        HWID ban their device
+                      </button>
+                      <button
+                        onClick={deviceMute}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        HWID mute (1 hour, every account on the device)
                       </button>
                       <button
                         onClick={wipeRoom}
@@ -1264,29 +1318,67 @@ function Clubhouse() {
                         clear this room
                       </button>
                     </div>
-                    {(ipBans.data ?? []).length > 0 && (
+                    {(deviceBans.data ?? []).length > 0 && (
                       <div className="mt-3 space-y-1.5">
                         <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
-                          Blocked addresses
+                          Banned devices
                         </div>
-                        {(ipBans.data ?? []).map((b) => (
+                        {(deviceBans.data ?? []).map((b) => (
                           <div key={b.id} className="flex items-center gap-2">
-                            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground/80">
-                              {b.ip}
+                            <span
+                              title={b.reason}
+                              className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground/80"
+                            >
+                              {b.device_id}
                             </span>
                             <button
-                              onClick={() => ipUnban(b.ip)}
+                              onClick={() => deviceUnban(b.device_id)}
                               className="font-mono text-[10px] uppercase tracking-wider text-rose-300 hover:opacity-80"
                             >
-                              unblock
+                              unban
                             </button>
                           </div>
                         ))}
                       </div>
                     )}
-                    <p className="mt-3 font-mono text-[10px] leading-relaxed text-mist">
-                      Browsers never expose a device's hardware address, so blocks use the network
-                      address the member last connected from.
+                  </div>
+                )}
+
+                {lvl >= 5 && (
+                  <div className="rounded-2xl border border-rose-300/30 bg-gradient-to-br from-rose-500/[0.08] to-amber-400/[0.06] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-rose-200">
+                      COVERST4R console
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        onClick={setIdentity}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        change their name, colour & font
+                      </button>
+                      <button
+                        onClick={() => setRank("coverstar")}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        make COVERST4R
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 6 && (
+                  <div className="rounded-2xl border border-fuchsia-300/40 bg-gradient-to-br from-fuchsia-500/[0.12] to-indigo-500/[0.10] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-200">
+                      TON 618 · singularity
+                    </div>
+                    <button
+                      onClick={deleteAll}
+                      className="w-full rounded-lg bg-fuchsia-500/20 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-fuchsia-100 ring-1 ring-fuchsia-300/50 transition-colors hover:bg-fuchsia-500/35"
+                    >
+                      ✦ Delete All
+                    </button>
+                    <p className="mt-2 font-mono text-[10px] leading-relaxed text-mist">
+                      Erases their account and every message from the database, then HWID-bans their device.
                     </p>
                   </div>
                 )}

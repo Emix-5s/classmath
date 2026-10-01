@@ -57,6 +57,34 @@
       "when": 1790523921899,
       "tag": "0007_staff_rank_tools",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790851457789,
+      "tag": "0008_add_coverstar_ton618_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790851509083,
+      "tag": "0009_supreme_ranks_hwid_delete_all",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790851532015,
+      "tag": "0010_grant_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790851636818,
+      "tag": "0011_set_rank_supreme",
+      "breakpoints": true
     }
   ]
 }
