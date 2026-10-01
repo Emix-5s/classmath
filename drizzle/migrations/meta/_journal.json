@@ -57,6 +57,13 @@
       "when": 1790523921899,
       "tag": "0007_staff_rank_tools",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790851457789,
+      "tag": "0008_add_coverstar_ton618_enum",
+      "breakpoints": true
     }
   ]
 }

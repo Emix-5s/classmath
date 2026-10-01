@@ -605,7 +605,15 @@ export type Database = {
       vip_mult: { Args: { _tier: string }; Returns: number }
     }
     Enums: {
-      app_role: "admin" | "mod" | "user" | "super_mod" | "co_owner" | "owner"
+      app_role:
+        | "admin"
+        | "mod"
+        | "user"
+        | "super_mod"
+        | "co_owner"
+        | "owner"
+        | "coverstar"
+        | "ton618"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -733,7 +741,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "mod", "user", "super_mod", "co_owner", "owner"],
+      app_role: [
+        "admin",
+        "mod",
+        "user",
+        "super_mod",
+        "co_owner",
+        "owner",
+        "coverstar",
+        "ton618",
+      ],
     },
   },
 } as const
