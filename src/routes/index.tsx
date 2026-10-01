@@ -1300,10 +1300,16 @@ function Clubhouse() {
                         make owner
                       </button>
                       <button
-                        onClick={ipBan}
+                        onClick={deviceBan}
                         className="rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-medium text-rose-200 ring-1 ring-rose-400/30 transition-colors hover:bg-rose-500/25"
                       >
-                        block their device address
+                        HWID ban their device
+                      </button>
+                      <button
+                        onClick={deviceMute}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        HWID mute (1 hour, every account on the device)
                       </button>
                       <button
                         onClick={wipeRoom}
@@ -1312,29 +1318,67 @@ function Clubhouse() {
                         clear this room
                       </button>
                     </div>
-                    {(ipBans.data ?? []).length > 0 && (
+                    {(deviceBans.data ?? []).length > 0 && (
                       <div className="mt-3 space-y-1.5">
                         <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
-                          Blocked addresses
+                          Banned devices
                         </div>
-                        {(ipBans.data ?? []).map((b) => (
+                        {(deviceBans.data ?? []).map((b) => (
                           <div key={b.id} className="flex items-center gap-2">
-                            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground/80">
-                              {b.ip}
+                            <span
+                              title={b.reason}
+                              className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground/80"
+                            >
+                              {b.device_id}
                             </span>
                             <button
-                              onClick={() => ipUnban(b.ip)}
+                              onClick={() => deviceUnban(b.device_id)}
                               className="font-mono text-[10px] uppercase tracking-wider text-rose-300 hover:opacity-80"
                             >
-                              unblock
+                              unban
                             </button>
                           </div>
                         ))}
                       </div>
                     )}
-                    <p className="mt-3 font-mono text-[10px] leading-relaxed text-mist">
-                      Browsers never expose a device's hardware address, so blocks use the network
-                      address the member last connected from.
+                  </div>
+                )}
+
+                {lvl >= 5 && (
+                  <div className="rounded-2xl border border-rose-300/30 bg-gradient-to-br from-rose-500/[0.08] to-amber-400/[0.06] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-rose-200">
+                      COVERST4R console
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        onClick={setIdentity}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        change their name, colour & font
+                      </button>
+                      <button
+                        onClick={() => setRank("coverstar")}
+                        className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                      >
+                        make COVERST4R
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 6 && (
+                  <div className="rounded-2xl border border-fuchsia-300/40 bg-gradient-to-br from-fuchsia-500/[0.12] to-indigo-500/[0.10] p-4 backdrop-blur-xl">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-200">
+                      TON 618 · singularity
+                    </div>
+                    <button
+                      onClick={deleteAll}
+                      className="w-full rounded-lg bg-fuchsia-500/20 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-fuchsia-100 ring-1 ring-fuchsia-300/50 transition-colors hover:bg-fuchsia-500/35"
+                    >
+                      ✦ Delete All
+                    </button>
+                    <p className="mt-2 font-mono text-[10px] leading-relaxed text-mist">
+                      Erases their account and every message from the database, then HWID-bans their device.
                     </p>
                   </div>
                 )}
