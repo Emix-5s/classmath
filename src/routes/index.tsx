@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAccount, perksFor } from "@/lib/account";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
 import { RANK_LEVEL, rankInfo, rankLabel, GRANT_CAP } from "@/lib/ranks";
+import { deviceId } from "@/lib/hwid";
 
 
 export const Route = createFileRoute("/")({
@@ -497,25 +498,73 @@ function Clubhouse() {
     qc.invalidateQueries({ queryKey: ["my-rank"] });
   }
 
-  async function ipBan() {
+  async function deviceBan() {
     if (!user || !requireTarget()) return;
-    const reason = window.prompt(`Reason for blocking ${modTarget!.username}'s address?`) ?? "";
-    const { data, error } = await supabase.rpc("staff_ip_ban", {
+    const reason = window.prompt(`Reason for banning ${modTarget!.username}'s device?`) ?? "";
+    const { data, error } = await supabase.rpc("staff_device_ban", {
       _actor: user.id,
       _target: modTarget!.id,
       _reason: reason,
     });
     if (error) return void toast.error(error.message);
-    toast.success(`Blocked ${data}`);
-    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+    toast.success(`Device ${data} banned`);
+    qc.invalidateQueries({ queryKey: ["device-bans"] });
   }
 
-  async function ipUnban(ip: string) {
-    if (!user) return;
-    const { error } = await supabase.rpc("staff_ip_unban", { _actor: user.id, _ip: ip });
+  async function deviceMute() {
+    if (!user || !requireTarget()) return;
+    const { data, error } = await supabase.rpc("staff_device_mute", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _minutes: 60,
+    });
     if (error) return void toast.error(error.message);
-    toast.success(`Unblocked ${ip}`);
-    qc.invalidateQueries({ queryKey: ["ip-bans"] });
+    toast.success(`Muted ${data} account(s) on that device for an hour`);
+  }
+
+  async function setIdentity() {
+    if (!user || !requireTarget()) return;
+    const username = window.prompt(`New name for ${modTarget!.username}? (blank to keep)`) ?? "";
+    const color = window.prompt("New name colour, e.g. #ff3b81 (blank to keep)") ?? "";
+    const font = window.prompt("New font key, e.g. body / mono / display (blank to keep)") ?? "";
+    if (!username && !color && !font) return;
+    const { error } = await supabase.rpc("staff_set_identity", {
+      _actor: user.id,
+      _target: modTarget!.id,
+      _username: username,
+      _color: color,
+      _font: font,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success("Identity updated");
+    qc.invalidateQueries({ queryKey: ["messages"] });
+    qc.invalidateQueries({ queryKey: ["profile"] });
+  }
+
+  async function deleteAll() {
+    if (!user || !requireTarget()) return;
+    const name = modTarget!.username;
+    if (!window.confirm(`DELETE ALL for ${name}? Account, every message, and a device ban.`)) return;
+    if (window.prompt(`Type ${name} to confirm`) !== name) return;
+    const { data, error } = await supabase.rpc("ton618_delete_all", {
+      _actor: user.id,
+      _target: modTarget!.id,
+    });
+    if (error) return void toast.error(error.message);
+    const res = data as { username: string; messages: number };
+    toast.success(`${res.username} erased — ${res.messages} messages removed`);
+    setModTarget(null);
+    qc.invalidateQueries({ queryKey: ["messages"] });
+    qc.invalidateQueries({ queryKey: ["staff-roles"] });
+    qc.invalidateQueries({ queryKey: ["device-bans"] });
+  }
+
+  async function deviceUnban(device: string) {
+    if (!user) return;
+    const { error } = await supabase.rpc("staff_device_unban", { _actor: user.id, _device: device });
+    if (error) return void toast.error(error.message);
+    toast.success("Device unbanned");
+    qc.invalidateQueries({ queryKey: ["device-bans"] });
   }
 
   async function wipeRoom() {
