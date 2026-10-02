@@ -663,6 +663,15 @@ export type Database = {
       }
       vip_max_bet: { Args: { _tier: string }; Returns: number }
       vip_mult: { Args: { _tier: string }; Returns: number }
+      von_action: {
+        Args: {
+          _action: string
+          _actor: string
+          _target: string
+          _value?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:

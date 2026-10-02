@@ -92,6 +92,13 @@
       "when": 1790938069810,
       "tag": "0012_add_von_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790938106152,
+      "tag": "0013_von_rank_powers",
+      "breakpoints": true
     }
   ]
 }
