@@ -280,6 +280,7 @@ export type Database = {
       rooms: {
         Row: {
           id: string
+          locked: boolean
           mod_only: boolean
           name: string
           slug: string
@@ -287,6 +288,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          locked?: boolean
           mod_only?: boolean
           name: string
           slug: string
@@ -294,6 +296,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          locked?: boolean
           mod_only?: boolean
           name?: string
           slug?: string
@@ -626,6 +629,14 @@ export type Database = {
       staff_device_unban: {
         Args: { _actor: string; _device: string }
         Returns: undefined
+      }
+      staff_freeze_room: {
+        Args: { _actor: string; _locked: boolean; _room: string }
+        Returns: undefined
+      }
+      staff_grant_all: {
+        Args: { _actor: string; _amount: number }
+        Returns: number
       }
       staff_ip_ban: {
         Args: { _actor: string; _reason?: string; _target: string }
