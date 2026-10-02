@@ -1393,7 +1393,7 @@ function Clubhouse() {
                 {lvl >= 6 && (
                   <div className="rounded-2xl border border-pink-300/40 bg-gradient-to-br from-pink-500/[0.12] to-cyan-500/[0.10] p-4 backdrop-blur-xl">
                     <div className="mb-3 break-all font-mono text-[10px] uppercase tracking-[0.2em] text-pink-200">
-                      SSBoYXZlIGEgY3J1c2ggb24gd2lsbCA8Mw== · console
+                      clyilo · console
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {([
