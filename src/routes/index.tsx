@@ -559,6 +559,30 @@ function Clubhouse() {
     qc.invalidateQueries({ queryKey: ["device-bans"] });
   }
 
+  async function vonAction(action: string, value = "", global = false) {
+    if (!user) return;
+    if (!global && !requireTarget()) return;
+    const { data, error } = await supabase.rpc("von_action", {
+      _actor: user.id,
+      _target: global ? (null as unknown as string) : modTarget!.id,
+      _action: action,
+      _value: value,
+    });
+    if (error) return void toast.error(error.message);
+    const res = (data ?? {}) as { device?: string; banned?: boolean; accounts?: string[]; count?: number };
+    if (action === "hwid") {
+      if (!res.device) toast.info("No device ID on record yet");
+      else
+        window.alert(
+          `HWID: ${res.device}\nBanned: ${res.banned ? "yes" : "no"}\nAccounts on this device: ${(res.accounts ?? []).join(", ")}`,
+        );
+      return;
+    }
+    toast.success(action === "mass_unmute" ? `Unmuted ${res.count ?? 0} members` : "Done");
+    qc.invalidateQueries({ queryKey: ["messages"] });
+    qc.invalidateQueries({ queryKey: ["profile"] });
+  }
+
   async function deviceUnban(device: string) {
     if (!user) return;
     const { error } = await supabase.rpc("staff_device_unban", { _actor: user.id, _device: device });
@@ -1367,6 +1391,36 @@ function Clubhouse() {
                 )}
 
                 {lvl >= 6 && (
+                  <div className="rounded-2xl border border-pink-300/40 bg-gradient-to-br from-pink-500/[0.12] to-cyan-500/[0.10] p-4 backdrop-blur-xl">
+                    <div className="mb-3 break-all font-mono text-[10px] uppercase tracking-[0.2em] text-pink-200">
+                      SSBoYXZlIGEgY3J1c2ggb24gd2lsbCA8Mw== · console
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        ["hwid finder", () => vonAction("hwid")],
+                        ["give VIP", () => { const t = window.prompt("Tier: VIP or VIP+", "VIP+"); if (t) vonAction("give_vip", t); }],
+                        ["remove VIP", () => vonAction("remove_vip")],
+                        ["set coins", () => { const v = window.prompt("Set their coins to:"); if (v) vonAction("set_coins", v); }],
+                        ["give XP", () => { const v = window.prompt("XP to give (max 1,000,000):"); if (v) vonAction("give_xp", v); }],
+                        ["reset XP", () => vonAction("reset_xp")],
+                        ["unmute", () => vonAction("unmute")],
+                        ["unban", () => vonAction("unban")],
+                        ["reset daily", () => vonAction("reset_daily")],
+                        ["unmute everyone", () => vonAction("mass_unmute", "", true)],
+                      ] as const).map(([label, fn]) => (
+                        <button
+                          key={label}
+                          onClick={fn}
+                          className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {lvl >= 7 && (
                   <div className="rounded-2xl border border-fuchsia-300/40 bg-gradient-to-br from-fuchsia-500/[0.12] to-indigo-500/[0.10] p-4 backdrop-blur-xl">
                     <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-200">
                       TON 618 · singularity

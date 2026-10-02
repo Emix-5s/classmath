@@ -1,5 +1,6 @@
 export const RANK_LEVEL: Record<string, number> = {
-  ton618: 6,
+  ton618: 7,
+  von: 6,
   coverstar: 5,
   owner: 4,
   co_owner: 3,
@@ -12,11 +13,17 @@ export const RANK_LEVEL: Record<string, number> = {
 export type RankInfo = { label: string; short: string; className: string };
 
 export const RANKS: Record<number, RankInfo> = {
-  6: {
+  7: {
     label: "TON 618",
     short: "TON 618",
     className:
       "bg-gradient-to-r from-fuchsia-500/25 to-indigo-500/25 text-fuchsia-200 ring-1 ring-fuchsia-300/50",
+  },
+  6: {
+    label: "SSBoYXZlIGEgY3J1c2ggb24gd2lsbCA8Mw==",
+    short: "SSBoYXZl…",
+    className:
+      "bg-gradient-to-r from-pink-500/25 to-cyan-400/20 text-pink-200 ring-1 ring-pink-300/50",
   },
   5: {
     label: "COVERST4R",
@@ -61,4 +68,5 @@ export const GRANT_CAP: Record<number, number> = {
   4: 2000000000,
   5: 2000000000,
   6: 2000000000,
+  7: 2000000000,
 };
