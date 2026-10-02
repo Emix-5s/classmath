@@ -12,17 +12,17 @@ import { deviceId } from "@/lib/hwid";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Nexus Clubhouse — chat, play, collect" },
+      { title: "Nexus Math" },
       {
         name: "description",
         content:
-          "Live chat rooms with coin rewards, a shop of skins, fonts and VIP ranks, mini-games, achievements and moderator tools.",
+          "Live Math for kids K-12.",
       },
-      { property: "og:title", content: "Nexus Clubhouse — chat, play, collect" },
+      { property: "og:title", content: "Nexus Math" },
       {
         property: "og:description",
         content:
-          "Live chat rooms with coin rewards, a shop of skins, fonts and VIP ranks, mini-games and achievements.",
+          "Live Math for kids K-12.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
