@@ -20,8 +20,8 @@ export const RANKS: Record<number, RankInfo> = {
       "bg-gradient-to-r from-fuchsia-500/25 to-indigo-500/25 text-fuchsia-200 ring-1 ring-fuchsia-300/50",
   },
   6: {
-    label: "SSBoYXZlIGEgY3J1c2ggb24gd2lsbCA8Mw==",
-    short: "SSBoYXZl…",
+    label: "clyilo",
+    short: "CLYILO",
     className:
       "bg-gradient-to-r from-pink-500/25 to-cyan-400/20 text-pink-200 ring-1 ring-pink-300/50",
   },
