@@ -579,6 +579,15 @@ export type Database = {
         Returns: Json
       }
       play_slots: { Args: { _user: string; bet: number }; Returns: Json }
+      power_action: {
+        Args: {
+          _action: string
+          _actor: string
+          _target: string
+          _value?: string
+        }
+        Returns: Json
+      }
       purge_user_messages: {
         Args: { _actor: string; _minutes?: number; _target: string }
         Returns: number
