@@ -681,6 +681,7 @@ export type Database = {
         Args: { _actor: string; _target: string }
         Returns: Json
       }
+      ton618_wipe_database: { Args: { _actor: string }; Returns: Json }
       vip_max_bet: { Args: { _tier: string }; Returns: number }
       vip_mult: { Args: { _tier: string }; Returns: number }
       von_action: {

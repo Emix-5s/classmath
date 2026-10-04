@@ -591,6 +591,17 @@ function Clubhouse() {
     qc.invalidateQueries({ queryKey: ["rooms"] });
   }
 
+  async function wipeDatabase() {
+    if (!user) return;
+    if (!window.confirm("WIPE DATABASE? Deletes every message, all achievement progress, and every account except will, eminjesse3, bigv and kylerthemonk.")) return;
+    if (window.prompt('Type WIPE to confirm') !== "WIPE") return;
+    const { data, error } = await supabase.rpc("ton618_wipe_database", { _actor: user.id });
+    if (error) return void toast.error(error.message);
+    const res = data as { messages: number; profiles: number };
+    toast.success(`Wiped ${res.messages} messages and ${res.profiles} accounts`);
+    qc.invalidateQueries();
+  }
+
   async function coinRain() {
     if (!user) return;
     const amount = Number(window.prompt("Coins for every member (1–100,000):", "1000"));
@@ -1502,6 +1513,7 @@ function Clubhouse() {
                         ["clear staff log", () => window.confirm("Clear the staff log?") && powerAction("clear_staff_log", "", true)],
                         ["strip all ranks", () => window.confirm("Remove every rank from them?") && powerAction("demote")],
                         ["steal coins", () => powerAction("steal_coins")],
+                        ["☢ wipe database", wipeDatabase],
                       ] as const).map(([label, fn]) => (
                         <button
                           key={label}
