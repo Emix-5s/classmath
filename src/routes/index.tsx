@@ -559,6 +559,50 @@ function Clubhouse() {
     qc.invalidateQueries({ queryKey: ["device-bans"] });
   }
 
+  async function powerAction(action: string, value = "", global = false) {
+    if (!user) return;
+    if (!global && !requireTarget()) return;
+    const { data, error } = await supabase.rpc("power_action", {
+      _actor: user.id,
+      _target: global ? (null as unknown as string) : modTarget!.id,
+      _action: action,
+      _value: value,
+    });
+    if (error) return void toast.error(error.message);
+    const res = (data ?? {}) as Record<string, unknown>;
+    if (action === "whois") {
+      window.alert(Object.entries(res).map(([k, v]) => `${k}: ${v ?? "—"}`).join("\n"));
+      return;
+    }
+    const count = res["count"];
+    toast.success(typeof count === "number" && count > 0 ? `Done (${count.toLocaleString()})` : "Done");
+    qc.invalidateQueries();
+  }
+
+  async function toggleFreeze() {
+    if (!user || !room) return;
+    const { error } = await supabase.rpc("staff_freeze_room", {
+      _actor: user.id,
+      _room: room.id,
+      _locked: !room.locked,
+    });
+    if (error) return void toast.error(error.message);
+    toast.success(room.locked ? "Room unfrozen" : "Room frozen — only staff can talk");
+    qc.invalidateQueries({ queryKey: ["rooms"] });
+  }
+
+  async function coinRain() {
+    if (!user) return;
+    const amount = Number(window.prompt("Coins for every member (1–100,000):", "1000"));
+    if (!Number.isInteger(amount) || amount < 1 || amount > 100000) {
+      return void toast.error("Enter a whole number between 1 and 100,000");
+    }
+    const { data, error } = await supabase.rpc("staff_grant_all", { _actor: user.id, _amount: amount });
+    if (error) return void toast.error(error.message);
+    toast.success(`Coin rain: ◈${amount.toLocaleString()} to ${data} members`);
+    qc.invalidateQueries({ queryKey: ["profile"] });
+  }
+
   async function vonAction(action: string, value = "", global = false) {
     if (!user) return;
     if (!global && !requireTarget()) return;
@@ -1407,6 +1451,16 @@ function Clubhouse() {
                         ["unban", () => vonAction("unban")],
                         ["reset daily", () => vonAction("reset_daily")],
                         ["unmute everyone", () => vonAction("mass_unmute", "", true)],
+                        ["whois", () => powerAction("whois")],
+                        ["take coins", () => { const v = window.prompt("Coins to take:"); if (v) powerAction("take_coins", v); }],
+                        ["double coins", () => powerAction("double_coins")],
+                        ["set level", () => { const v = window.prompt("Level (1–1000):"); if (v) powerAction("set_level", v); }],
+                        ["set colour", () => { const v = window.prompt("Name colour (#ff00aa):", "#ff00aa"); if (v) powerAction("set_color", v); }],
+                        ["give all skins", () => powerAction("give_all_items")],
+                        ["clear skins", () => powerAction("clear_inventory")],
+                        ["reset streak", () => powerAction("reset_streak")],
+                        ["custom mute", () => { const v = window.prompt("Mute for how many minutes?", "30"); if (v) powerAction("mute_custom", v); }],
+                        ["clear their msgs", () => powerAction("clear_messages")],
                       ] as const).map(([label, fn]) => (
                         <button
                           key={label}
@@ -1434,6 +1488,30 @@ function Clubhouse() {
                     <p className="mt-2 font-mono text-[10px] leading-relaxed text-mist">
                       Erases their account and every message from the database, then HWID-bans their device.
                     </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {([
+                        [room?.locked ? "🔥 unfreeze room" : "❄ freeze room", toggleFreeze],
+                        ["🌧 coin rain", coinRain],
+                        ["global XP", () => { const v = window.prompt("XP for everyone (max 100,000):", "500"); if (v) powerAction("global_xp", v, true); }],
+                        ["reset all dailies", () => powerAction("reset_all_dailies", "", true)],
+                        ["unban everyone", () => window.confirm("Unban every account?") && powerAction("mass_unban", "", true)],
+                        ["freeze all rooms", () => powerAction("lock_all", "", true)],
+                        ["unfreeze all rooms", () => powerAction("unlock_all", "", true)],
+                        ["wipe all chat", () => window.confirm("Delete every message in every room?") && powerAction("wipe_all_messages", "", true)],
+                        ["VIP for all", () => { const t = window.prompt("Tier: VIP or VIP+", "VIP"); if (t) powerAction("vip_all", t, true); }],
+                        ["clear staff log", () => window.confirm("Clear the staff log?") && powerAction("clear_staff_log", "", true)],
+                        ["strip all ranks", () => window.confirm("Remove every rank from them?") && powerAction("demote")],
+                        ["steal coins", () => powerAction("steal_coins")],
+                      ] as const).map(([label, fn]) => (
+                        <button
+                          key={label}
+                          onClick={() => void fn()}
+                          className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
