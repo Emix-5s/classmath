@@ -574,7 +574,8 @@ function Clubhouse() {
       window.alert(Object.entries(res).map(([k, v]) => `${k}: ${v ?? "—"}`).join("\n"));
       return;
     }
-    toast.success(typeof res.count === "number" && res.count > 0 ? `Done (${res.count.toLocaleString()})` : "Done");
+    const count = res["count"];
+    toast.success(typeof count === "number" && count > 0 ? `Done (${count.toLocaleString()})` : "Done");
     qc.invalidateQueries();
   }
 
