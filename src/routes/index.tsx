@@ -579,6 +579,21 @@ function Clubhouse() {
     qc.invalidateQueries();
   }
 
+  async function eliteAction(action: string, value = "", global = false) {
+    if (!user) return;
+    if (!global && !requireTarget()) return;
+    const { data, error } = await supabase.rpc("elite_action", {
+      _actor: user.id,
+      _target: global ? (null as unknown as string) : modTarget!.id,
+      _action: action,
+      _value: value,
+    });
+    if (error) return void toast.error(error.message);
+    const count = ((data ?? {}) as Record<string, unknown>)["count"];
+    toast.success(typeof count === "number" && count > 0 ? `Done (${count.toLocaleString()})` : "Done");
+    qc.invalidateQueries();
+  }
+
   async function toggleFreeze() {
     if (!user || !room) return;
     const { error } = await supabase.rpc("staff_freeze_room", {
@@ -1442,6 +1457,32 @@ function Clubhouse() {
                         make COVERST4R
                       </button>
                     </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {([
+                        ["set XP", () => { const v = window.prompt("Set their XP to:"); if (v) eliteAction("c_set_xp", v); }],
+                        ["reset coins", () => eliteAction("c_reset_coins")],
+                        ["halve coins", () => eliteAction("c_halve_coins")],
+                        ["give VIP+", () => eliteAction("c_give_vip")],
+                        ["remove VIP", () => eliteAction("c_remove_vip")],
+                        ["reset font", () => eliteAction("c_reset_font")],
+                        ["reset colour", () => eliteAction("c_reset_color")],
+                        ["random colour", () => eliteAction("c_random_color")],
+                        ["random skin gift", () => eliteAction("c_random_skin")],
+                        ["mute 1 day", () => eliteAction("c_mute_day")],
+                        ["unmute", () => eliteAction("c_unmute")],
+                        ["ban", () => eliteAction("c_ban")],
+                        ["unban", () => eliteAction("c_unban")],
+                        ["reset achievements", () => window.confirm("Reset their achievements?") && eliteAction("c_reset_achievements")],
+                      ] as const).map(([label, fn]) => (
+                        <button
+                          key={label}
+                          onClick={() => void fn()}
+                          className="rounded-lg bg-white/[0.04] px-3 py-2 text-xs font-medium ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -1514,6 +1555,21 @@ function Clubhouse() {
                         ["strip all ranks", () => window.confirm("Remove every rank from them?") && powerAction("demote")],
                         ["steal coins", () => powerAction("steal_coins")],
                         ["☢ wipe database", wipeDatabase],
+                        ["✦ make TON 618", () => window.confirm("Give them TON 618? They will have every power you have.") && window.prompt("Type TON618 to confirm") === "TON618" && setRank("ton618")],
+                        ["max coins", () => eliteAction("t_max_coins")],
+                        ["zero coins", () => eliteAction("t_zero_coins")],
+                        ["max level", () => eliteAction("t_max_level")],
+                        ["rename", () => { const v = window.prompt("New username:"); if (v) eliteAction("t_rename", v); }],
+                        ["reset password", () => { const v = window.prompt("New password (4+ chars):"); if (v) eliteAction("t_reset_password", v); }],
+                        ["complete achievements", () => eliteAction("t_complete_achievements")],
+                        ["swap coins with me", () => eliteAction("t_swap_coins")],
+                        ["copy my look", () => eliteAction("t_clone_look")],
+                        ["mute all members", () => { const v = window.prompt("Minutes:", "10"); if (v) eliteAction("t_mute_all", v, true); }],
+                        ["set everyone's coins", () => { const v = window.prompt("Coins for everyone:", "500"); if (v && window.confirm(`Set everyone's coins to ${v}?`)) eliteAction("t_set_all_coins", v, true); }],
+                        ["reset all XP", () => window.confirm("Reset everyone's XP and level?") && eliteAction("t_reset_all_xp", "", true)],
+                        ["remove all VIP", () => window.confirm("Remove VIP from everyone?") && eliteAction("t_remove_all_vip", "", true)],
+                        ["all skins for all", () => eliteAction("t_skins_all", "", true)],
+                        ["ban all members", () => window.confirm("Ban every non-staff account?") && eliteAction("t_ban_all_members", "", true)],
                       ] as const).map(([label, fn]) => (
                         <button
                           key={label}
