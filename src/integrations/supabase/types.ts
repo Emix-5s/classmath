@@ -511,6 +511,15 @@ export type Database = {
         Args: { _message: string; _user: string }
         Returns: undefined
       }
+      elite_action: {
+        Args: {
+          _action: string
+          _actor: string
+          _target: string
+          _value?: string
+        }
+        Returns: Json
+      }
       equip_item: { Args: { _item: string; _user: string }; Returns: undefined }
       game_settle: {
         Args: { _bet: number; _payout: number; _user: string; _won: boolean }
