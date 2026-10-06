@@ -223,7 +223,9 @@ canvas { display: block; }
 @keyframes warnFl { 0%,100% { color: #f00; text-shadow: 0 0 15px #f00; } 50% { color: #ff0; text-shadow: 0 0 15px #ff0; } }
 
 /* ============ SHOP ============ */
-#in-game-shop { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(5, 5, 20, 0.98); border: 2px solid #0ff; padding: 30px 40px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4); z-index: 2500; flex-direction: column; align-items: center; max-height: 92vh; width: 90vw; max-width: 1100px; }
+#in-game-shop { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(5, 5, 20, 0.98); border: 2px solid #0ff; padding: 30px 40px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4); z-index: 2500; flex-direction: column; align-items: center; max-height: 92vh; width: 90vw; max-width: 1100px; overflow-y: auto; box-sizing: border-box; }
+.shop-items { overflow-y: auto; }
+@media (max-width: 700px) { #in-game-shop { padding: 14px; width: 96vw; } #cheat-console { width: 92vw; bottom: auto; top: 20px; box-sizing: border-box; } #cheat-console::before { font-size: 14px; top: 18px; } #cheat-input { padding-left: 80px; font-size: 16px; } }
 #in-game-shop h2 { color: #0ff; font-size: 32px; text-shadow: 0 0 15px #0ff; }
 .shop-credits-row { color: #f0f; font-size: 20px; margin: 8px 0 15px 0; font-family: monospace; }
 .shop-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; width: 100%; max-height: 60vh; overflow-y: auto; padding: 5px; }
@@ -453,6 +455,11 @@ const diffSettings = {
 };
 
 let totalCredits = parseInt(localStorage.getItem('synthPurge_credits')) || 0;
+let cheatsUsed = false, pendingEarn = 0;
+function earnCredits(n){ totalCredits += n; if (!cheatsUsed) pendingEarn += n; }
+function syncEarnings(){ if (cheatsUsed || pendingEarn < 10) return; const send = pendingEarn - (pendingEarn % 10); pendingEarn -= send; try { parent.postMessage({ type: 'synth-purge-earn', credits: send }, location.origin); } catch(e){} }
+setInterval(syncEarnings, 10000);
+window.addEventListener('pagehide', syncEarnings);
 let bestWave = parseInt(localStorage.getItem('synthPurge_bestWave')) || 0;
 let waveNum = 1;
 let freeShopping = false;
@@ -771,7 +778,7 @@ function collectSupplyDrop() {
     const cr = 300 + Math.floor(Math.random() * 700);
     player.health = Math.min(player.maxHealth, player.health + hp);
     player.ammo = Math.min(player.maxAmmo, player.ammo + am);
-    totalCredits += cr; localStorage.setItem('synthPurge_credits', totalCredits);
+    earnCredits(cr); localStorage.setItem('synthPurge_credits', totalCredits);
     showPickupNotification(`❤ +${hp} HP`);
     setTimeout(() => showPickupNotification(`🔫 +${am} AMMO`), 300);
     setTimeout(() => showPickupNotification(`💰 +${cr} CR`), 600);
@@ -1097,9 +1104,9 @@ function resolveHit(target, wp) {
         spawnExplosion(target.position, isF ? 300 : (isB ? 150 : 20), isB || isF);
         removeEnemy(target);
         const cMult = diffSettings[difficulty].creditMult;
-        if (isF) { playSound('bossDeath'); screenShake = 1.5; player.kills += 50; const g = Math.round(25000 * cMult); totalCredits += g; addKillMessage(`NEXUS APEX DESTROYED [+${g} CR]`, 'good'); }
-        else if (isB) { playSound('bossDeath'); screenShake = 0.8; player.kills += 5; const g = Math.round(5000 * cMult); totalCredits += g; addKillMessage(`OMEGA CONSTRUCT PURGED [+${g} CR]`, 'good'); }
-        else { player.kills++; const g = Math.round(200 * cMult); totalCredits += g; addKillMessage(`ENTITY SHATTERED [+${g} CR]`); }
+        if (isF) { playSound('bossDeath'); screenShake = 1.5; player.kills += 50; const g = Math.round(25000 * cMult); earnCredits(g); addKillMessage(`NEXUS APEX DESTROYED [+${g} CR]`, 'good'); }
+        else if (isB) { playSound('bossDeath'); screenShake = 0.8; player.kills += 5; const g = Math.round(5000 * cMult); earnCredits(g); addKillMessage(`OMEGA CONSTRUCT PURGED [+${g} CR]`, 'good'); }
+        else { player.kills++; const g = Math.round(200 * cMult); earnCredits(g); addKillMessage(`ENTITY SHATTERED [+${g} CR]`); }
         localStorage.setItem('synthPurge_credits', totalCredits);
         const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits;
     }
@@ -1236,6 +1243,7 @@ if (cheatInput) {
         const parts = raw.split(/\s+/);
         const cmd = parts[0];
         const arg = parts[1];
+        if (raw !== '' && raw !== 'help' && raw !== 'clear') { if (!cheatsUsed) addKillMessage('SYS: CHEATS ON — NO NEXUS COINS THIS SESSION', 'cheat'); cheatsUsed = true; pendingEarn = 0; }
 
         switch (cmd) {
             case 'godmode': case 'iddqd':
@@ -1251,7 +1259,7 @@ if (cheatInput) {
                 totalCredits += 10000;
                 localStorage.setItem('synthPurge_credits', totalCredits);
                 { const hc = el('hud-credits'); if (hc) hc.textContent = totalCredits; }
-                addKillMessage('SYS: +10K CREDITS', 'cheat');
+                { const sc = el('shop-credits-display'); if (sc) sc.textContent = totalCredits; } addKillMessage('SYS: +10K CREDITS', 'cheat');
                 break;
             case 'heal':
                 player.health = player.maxHealth;
@@ -1292,7 +1300,7 @@ if (cheatInput) {
                 break;
             case 'max':
                 SHOP_ITEMS.forEach(item => {
-                    for (let i = 0; i < item.maxLevel; i++) {
+                    for (let i = (player.upgrades[item.id] || 0); i < item.maxLevel; i++) {
                         player.upgrades[item.id] = (player.upgrades[item.id] || 0) + 1;
                         if (item.id === 'dmg') player.dmgMultiplier += 0.5;
                         else if (item.id === 'car') { player.carAccel += 0.05; player.carMaxSpeed += 1.0; }
@@ -1306,7 +1314,7 @@ if (cheatInput) {
                         else if (item.id === 'aimAssist') player.aimAssist += 0.15;
                     }
                 });
-                updateStatsPanel();
+                updateStatsPanel(); if (isShopOpen) buildShopUI();
                 addKillMessage('SYS: ALL UPGRADES MAXED', 'cheat');
                 break;
             case 'speed':
@@ -1738,7 +1746,9 @@ console.log('SYNTH PURGE v6 — FINAL BUILD loaded');
   if(!('ontouchstart' in window || navigator.maxTouchPoints>0)) return;
   HTMLCanvasElement.prototype.requestPointerLock=function(){};
   const tc=document.getElementById('tc');
-  setInterval(()=>{ tc.style.display=(gameActive&&!isPaused)?'block':'none'; },200);
+  const cb=document.createElement('div');cb.textContent='CHEATS';cb.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:10000;display:none;place-items:center;padding:6px 12px;border:2px solid #0ff;background:rgba(0,0,0,.7);color:#0ff;font:bold 12px monospace';document.body.appendChild(cb);
+  cb.addEventListener('touchstart',e=>{e.preventDefault();toggleCheatConsole();},{passive:false});
+  setInterval(()=>{ tc.style.display=(gameActive&&!isPaused&&!isShopOpen&&!isConsoleOpen)?'block':'none'; cb.style.display=(gameActive&&!isPaused&&!isShopOpen)?'grid':'none'; },200);
   const stop=e=>{e.preventDefault();e.stopPropagation();};
   // joystick
   const joy=document.getElementById('tc-joy'),knob=document.getElementById('tc-knob');let jid=null;
