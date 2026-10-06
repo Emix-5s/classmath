@@ -62,6 +62,29 @@ function Clubhouse() {
   const scroller = useRef<HTMLDivElement>(null);
   const gameFrame = useRef<HTMLIFrameElement>(null);
 
+  useEffect(() => {
+    if (!user) return;
+    const uid = user.id;
+    async function onMsg(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (e.source !== gameFrame.current?.contentWindow) return;
+      const d = e.data as { type?: string; credits?: number };
+      if (d?.type !== "synth-purge-earn" || typeof d.credits !== "number") return;
+      const { data, error } = await supabase.rpc("synth_purge_reward", {
+        _user: uid,
+        _credits: Math.floor(d.credits),
+      });
+      if (error) return;
+      const coins = (data as { coins?: number } | null)?.coins ?? 0;
+      if (coins > 0) {
+        toast.success(`Synth Purge: +${coins} ◈`);
+        qc.invalidateQueries({ queryKey: ["profile"] });
+      }
+    }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [user, qc]);
+
   const profile = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
