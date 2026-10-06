@@ -104,6 +104,35 @@ export type Database = {
         }
         Relationships: []
       }
+      game_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_payouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           created_at: string
@@ -685,6 +714,10 @@ export type Database = {
       staff_wipe_room: {
         Args: { _actor: string; _room: string }
         Returns: number
+      }
+      synth_purge_reward: {
+        Args: { _credits: number; _user: string }
+        Returns: Json
       }
       ton618_delete_all: {
         Args: { _actor: string; _target: string }
