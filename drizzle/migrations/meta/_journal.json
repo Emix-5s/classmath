@@ -127,6 +127,13 @@
       "when": 1791200888361,
       "tag": "0017_elite_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791288715492,
+      "tag": "0018_synth_purge_rewards",
+      "breakpoints": true
     }
   ]
 }
