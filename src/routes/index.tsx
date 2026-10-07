@@ -62,6 +62,15 @@ function Clubhouse() {
   const scroller = useRef<HTMLDivElement>(null);
   const gameFrame = useRef<HTMLIFrameElement>(null);
 
+  const gameSession = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || roomView !== "game") return;
+    gameSession.current = null;
+    supabase.rpc("start_game_session", { _user: user.id }).then(({ data }) => {
+      gameSession.current = (data as string | null) ?? null;
+    });
+  }, [user, roomView]);
+
   useEffect(() => {
     if (!user) return;
     const uid = user.id;
@@ -70,8 +79,10 @@ function Clubhouse() {
       if (e.source !== gameFrame.current?.contentWindow) return;
       const d = e.data as { type?: string; credits?: number };
       if (d?.type !== "synth-purge-earn" || typeof d.credits !== "number") return;
-      const { data, error } = await supabase.rpc("synth_purge_reward", {
+      if (!gameSession.current) return;
+      const { data, error } = await supabase.rpc("synth_purge_claim", {
         _user: uid,
+        _session: gameSession.current,
         _credits: Math.floor(d.credits),
       });
       if (error) return;
@@ -1084,7 +1095,34 @@ function Clubhouse() {
                 </span>
                 <span className="font-mono text-[10px] text-mist">rarity</span>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <form
+                className="mb-3 flex items-center gap-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!user) return;
+                  const hex = String(new FormData(e.currentTarget).get("hex") ?? "");
+                  const { error } = await supabase.rpc("set_name_hex", { _user: user.id, _hex: hex });
+                  if (error) return void toast.error(error.message);
+                  toast.success("Name colour updated");
+                  qc.invalidateQueries({ queryKey: ["profile"] });
+                }}
+              >
+                <input
+                  type="color"
+                  name="hex"
+                  key={p?.name_color}
+                  defaultValue={/^#[0-9a-fA-F]{6}$/.test(p?.name_color ?? "") ? p!.name_color : "#ffffff"}
+                  className="h-9 w-12 cursor-pointer rounded-lg border border-white/10 bg-transparent"
+                  aria-label="Pick your name colour"
+                />
+                <button
+                  type="submit"
+                  className="flex-1 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 font-mono text-[10px] uppercase tracking-wider"
+                >
+                  set name colour
+                </button>
+              </form>
+              <div className="grid max-h-[28rem] grid-cols-2 gap-2.5 overflow-y-auto pr-1">
                 {(shop.data ?? []).map((item) => {
                   const owned = inventory.data?.includes(item.id);
                   const equipped =

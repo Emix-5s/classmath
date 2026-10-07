@@ -133,6 +133,38 @@ export type Database = {
           },
         ]
       }
+      game_sessions: {
+        Row: {
+          credits_claimed: number
+          id: string
+          last_claim_at: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          credits_claimed?: number
+          id?: string
+          last_claim_at?: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          credits_claimed?: number
+          id?: string
+          last_claim_at?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           created_at: string
@@ -639,6 +671,10 @@ export type Database = {
       record_ip: { Args: { _ip: string; _user: string }; Returns: boolean }
       redeem_code: { Args: { _code: string; _user: string }; Returns: Json }
       reset_font: { Args: { _user: string }; Returns: undefined }
+      set_name_hex: {
+        Args: { _hex: string; _user: string }
+        Returns: undefined
+      }
       signup_user: {
         Args: { _password: string; _username: string }
         Returns: {
@@ -714,6 +750,11 @@ export type Database = {
       staff_wipe_room: {
         Args: { _actor: string; _room: string }
         Returns: number
+      }
+      start_game_session: { Args: { _user: string }; Returns: string }
+      synth_purge_claim: {
+        Args: { _credits: number; _session: string; _user: string }
+        Returns: Json
       }
       synth_purge_reward: {
         Args: { _credits: number; _user: string }
