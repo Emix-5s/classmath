@@ -134,6 +134,13 @@
       "when": 1791288715492,
       "tag": "0018_synth_purge_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791373977668,
+      "tag": "0019_server_game_sessions_and_hex",
+      "breakpoints": true
     }
   ]
 }
