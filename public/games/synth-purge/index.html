@@ -424,7 +424,9 @@ canvas { display: block; }
 </div>
 
 <div id="cheat-console">
+    <button id="cc-close" type="button">X</button>
     <input type="text" id="cheat-input" autocomplete="off" spellcheck="false">
+    <div id="cc-quick"></div>
     <div id="cheat-hints">Try: godmode · money · heal · max · free · killall · wave 10 · speed 2 · spawn 20</div>
 </div>
 
@@ -1747,7 +1749,7 @@ console.log('SYNTH PURGE v6 — FINAL BUILD loaded');
   HTMLCanvasElement.prototype.requestPointerLock=function(){};
   const tc=document.getElementById('tc');
   const cb=document.createElement('div');cb.textContent='CHEATS';cb.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:10000;display:none;place-items:center;padding:6px 12px;border:2px solid #0ff;background:rgba(0,0,0,.7);color:#0ff;font:bold 12px monospace';document.body.appendChild(cb);
-  cb.addEventListener('touchstart',e=>{e.preventDefault();toggleCheatConsole();},{passive:false});
+  cb.addEventListener('click',e=>{e.preventDefault();toggleCheatConsole();if(isConsoleOpen){try{document.getElementById('cheat-input').focus();}catch(_){}}});
   setInterval(()=>{ tc.style.display=(gameActive&&!isPaused&&!isShopOpen&&!isConsoleOpen)?'block':'none'; cb.style.display=(gameActive&&!isPaused&&!isShopOpen)?'grid':'none'; },200);
   const stop=e=>{e.preventDefault();e.stopPropagation();};
   // joystick
@@ -1776,6 +1778,28 @@ console.log('SYNTH PURGE v6 — FINAL BUILD loaded');
   hold('tc-dash',()=>{keys['shift']=true;},()=>{keys['shift']=false;});
   const tap=k=>()=>{window.dispatchEvent(new KeyboardEvent('keydown',{key:k}));setTimeout(()=>window.dispatchEvent(new KeyboardEvent('keyup',{key:k})),80);};
   hold('tc-e',tap('e'));hold('tc-r',tap('r'));
+})();
+</script>
+<style>
+canvas{position:fixed!important;left:0;top:0;z-index:0!important;-webkit-transform:translateZ(0);transform:translateZ(0)}
+#in-game-shop,#cheat-console{position:fixed!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important;left:0!important;right:0!important;margin:0 auto!important;z-index:10002!important}
+#in-game-shop{top:4vh!important;bottom:auto!important;max-height:92vh;-webkit-overflow-scrolling:touch}
+#cheat-console{top:20px!important;bottom:auto!important;width:min(600px,92vw)!important;box-sizing:border-box}
+#pause-menu{position:fixed!important;z-index:10003!important}
+#cc-close{position:absolute;right:8px;top:8px;background:#000;color:#f0f;border:2px solid #f0f;font:bold 14px monospace;padding:4px 10px;z-index:2}
+#cc-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:40px}
+#cc-quick button{background:rgba(0,255,255,.12);color:#0ff;border:1px solid #0ff;font:bold 13px monospace;padding:8px 10px;text-transform:uppercase}
+</style>
+<script>
+(function(){
+  const q=document.getElementById('cc-quick'),inp=document.getElementById('cheat-input');
+  ['godmode','ammo','money','heal','max','free','killall','supply','noclip','boss','wave 10','speed 2','spawn 20'].forEach(c=>{const b=document.createElement('button');b.type='button';b.textContent=c;
+    b.addEventListener('click',()=>{inp.value=c;inp.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));});q.appendChild(b);});
+  document.getElementById('cc-close').addEventListener('click',()=>{if(isConsoleOpen)toggleCheatConsole();});
+  // safety: never leave the game thinking a menu is open while it is invisible
+  setInterval(()=>{const s=document.getElementById('in-game-shop'),c=document.getElementById('cheat-console');
+    if(isShopOpen&&s&&s.style.display!=='flex')s.style.display='flex';
+    if(isConsoleOpen&&c&&c.style.display!=='block')c.style.display='block';},300);
 })();
 </script>
 </body>
