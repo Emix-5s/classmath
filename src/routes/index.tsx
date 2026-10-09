@@ -110,6 +110,48 @@ function Clubhouse() {
     },
   });
 
+  // Synth Purge PvP: relay game state between the iframe and everyone else playing.
+  const myName = profile.data?.username;
+  const myColor = profile.data?.name_color;
+  useEffect(() => {
+    if (!user || !myName || roomView !== "game") return;
+    const id = user.id;
+    const name = myName;
+    const toGame = (m: unknown) =>
+      gameFrame.current?.contentWindow?.postMessage(m, window.location.origin);
+    const channel = supabase.channel("synth-pvp", { config: { broadcast: { self: false } } });
+    channel
+      .on("broadcast", { event: "state" }, ({ payload }) => toGame({ ...payload, type: "mp-state" }))
+      .on("broadcast", { event: "hit" }, ({ payload }) => toGame({ ...payload, type: "mp-hit" }))
+      .on("broadcast", { event: "kill" }, ({ payload }) => toGame({ ...payload, type: "mp-kill" }))
+      .on("broadcast", { event: "leave" }, ({ payload }) => toGame({ ...payload, type: "mp-leave" }))
+      .subscribe();
+    const hello = () => toGame({ type: "mp-hello", id, name });
+    hello();
+    const helloTimer = window.setInterval(hello, 2000);
+    function onMsg(e: MessageEvent) {
+      if (e.origin !== window.location.origin || e.source !== gameFrame.current?.contentWindow) return;
+      const d = e.data as Record<string, unknown> & { type?: string };
+      if (d?.type === "mp-state") {
+        void channel.send({ type: "broadcast", event: "state", payload: { ...d, id, name, color: myColor } });
+      } else if (d?.type === "mp-hit") {
+        void channel.send({ type: "broadcast", event: "hit", payload: { target: d["target"], dmg: d["dmg"], fromName: name } });
+      } else if (d?.type === "mp-kill") {
+        const payload = { killer: d["killer"], victim: name };
+        void channel.send({ type: "broadcast", event: "kill", payload });
+        toGame({ ...payload, type: "mp-kill" });
+      }
+    }
+    window.addEventListener("message", onMsg);
+    return () => {
+      window.removeEventListener("message", onMsg);
+      window.clearInterval(helloTimer);
+      void channel.send({ type: "broadcast", event: "leave", payload: { id } });
+      supabase.removeChannel(channel);
+    };
+  }, [user, myName, myColor, roomView]);
+
+
   const myRank = useQuery({
     queryKey: ["my-rank", user?.id],
     enabled: !!user,
