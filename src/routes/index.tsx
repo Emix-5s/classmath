@@ -135,9 +135,9 @@ function Clubhouse() {
       if (d?.type === "mp-state") {
         void channel.send({ type: "broadcast", event: "state", payload: { ...d, id, name, color: myColor } });
       } else if (d?.type === "mp-hit") {
-        void channel.send({ type: "broadcast", event: "hit", payload: { target: d.target, dmg: d.dmg, fromName: name } });
+        void channel.send({ type: "broadcast", event: "hit", payload: { target: d["target"], dmg: d["dmg"], fromName: name } });
       } else if (d?.type === "mp-kill") {
-        const payload = { killer: d.killer, victim: name };
+        const payload = { killer: d["killer"], victim: name };
         void channel.send({ type: "broadcast", event: "kill", payload });
         toGame({ ...payload, type: "mp-kill" });
       }
