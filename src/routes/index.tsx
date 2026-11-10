@@ -7,6 +7,9 @@ import { useAccount, perksFor } from "@/lib/account";
 import { fontClass, rarityClass, formatCoins } from "@/lib/clubhouse";
 import { RANK_LEVEL, rankInfo, rankLabel, GRANT_CAP } from "@/lib/ranks";
 import { deviceId } from "@/lib/hwid";
+import { MemberInspector } from "@/components/MemberInspector";
+import { Platformer } from "@/components/Platformer";
+import { Button } from "@/components/ui/button";
 
 
 export const Route = createFileRoute("/")({
@@ -58,7 +61,7 @@ function Clubhouse() {
   const [flipBet, setFlipBet] = useState(50);
   const [dicePick, setDicePick] = useState(3);
   const [codeInput, setCodeInput] = useState("");
-  const [roomView, setRoomView] = useState<"chat" | "game">("chat");
+  const [roomView, setRoomView] = useState<"chat" | "game" | "platformer">("chat");
   const scroller = useRef<HTMLDivElement>(null);
   const gameFrame = useRef<HTMLIFrameElement>(null);
 
@@ -102,7 +105,7 @@ function Clubhouse() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, username, coins, xp, level, name_color, font_key, vip_tier, muted_until, banned")
         .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
@@ -1006,6 +1009,11 @@ function Clubhouse() {
                 >
                   Synth Purge
                 </button>
+                <Button
+                  variant={roomView === "platformer" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setRoomView("platformer")}
+                >Platformer</Button>
               </div>
             </div>
             {roomView === "chat" ? (
@@ -1104,6 +1112,8 @@ function Clubhouse() {
                   </div>
                 </div>
               </>
+            ) : roomView === "platformer" ? (
+              <Platformer account={user} balance={p?.coins ?? 0} />
             ) : (
               <div className="relative h-[min(70vh,680px)] min-h-[480px] bg-ink">
                 <iframe
@@ -1634,6 +1644,7 @@ function Clubhouse() {
                     <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-200">
                       TON 618 · singularity
                     </div>
+                    <MemberInspector account={user} />
                     <button
                       onClick={deleteAll}
                       className="w-full rounded-lg bg-fuchsia-500/20 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-fuchsia-100 ring-1 ring-fuchsia-300/50 transition-colors hover:bg-fuchsia-500/35"

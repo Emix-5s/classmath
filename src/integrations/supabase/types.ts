@@ -44,6 +44,32 @@ export type Database = {
         }
         Relationships: []
       }
+      club_sessions: {
+        Row: {
+          expires_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       code_redemptions: {
         Row: {
           code_id: string
@@ -255,6 +281,61 @@ export type Database = {
             foreignKeyName: "messages_user_id_profiles_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platformer_runs: {
+        Row: {
+          collected: number[]
+          id: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          collected?: number[]
+          id?: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          collected?: number[]
+          id?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platformer_runs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platformer_upgrades: {
+        Row: {
+          jump: number
+          speed: number
+          user_id: string
+        }
+        Insert: {
+          jump?: number
+          speed?: number
+          user_id: string
+        }
+        Update: {
+          jump?: number
+          speed?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platformer_upgrades_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -593,6 +674,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      inspect_member: {
+        Args: { _offset?: number; _target: string; _token: string }
+        Returns: Json
+      }
       login_user: {
         Args: { _password: string; _username: string }
         Returns: {
@@ -632,6 +717,16 @@ export type Database = {
         Args: { _actor: string; _amount: number; _target: string }
         Returns: undefined
       }
+      open_club_session: {
+        Args: { _password: string; _username: string }
+        Returns: string
+      }
+      platformer_buy: { Args: { _kind: string; _token: string }; Returns: Json }
+      platformer_collect: {
+        Args: { _coin: number; _run: string; _token: string }
+        Returns: number
+      }
+      platformer_open: { Args: { _token: string }; Returns: Json }
       play_coin_flip: {
         Args: { _user: string; bet: number; guess: string }
         Returns: Json
@@ -671,6 +766,7 @@ export type Database = {
       record_ip: { Args: { _ip: string; _user: string }; Returns: boolean }
       redeem_code: { Args: { _code: string; _user: string }; Returns: Json }
       reset_font: { Args: { _user: string }; Returns: undefined }
+      session_member: { Args: { _token: string }; Returns: string }
       set_name_hex: {
         Args: { _hex: string; _user: string }
         Returns: undefined

@@ -141,6 +141,13 @@
       "when": 1791373977668,
       "tag": "0019_server_game_sessions_and_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794321346693,
+      "tag": "0020_member_inspector_platformer",
+      "breakpoints": true
     }
   ]
 }
