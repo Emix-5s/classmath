@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { test, expect } from "bun:test";
 import { COINS_PER_RUN, upgradeCost, movement, coinPosition } from "./platformer-rules";
 
