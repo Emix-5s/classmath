@@ -9,6 +9,7 @@ import { RANK_LEVEL, rankInfo, rankLabel, GRANT_CAP } from "@/lib/ranks";
 import { deviceId } from "@/lib/hwid";
 import { MemberInspector } from "@/components/MemberInspector";
 import { Platformer } from "@/components/Platformer";
+import { Button } from "@/components/ui/button";
 
 
 export const Route = createFileRoute("/")({
