@@ -39,7 +39,7 @@ export function Platformer({ account, balance }: { account: { id: string; userna
       if (cancelled) return;
       class Valley extends Phaser.Scene {
         player?: import("phaser").Physics.Arcade.Sprite;
-        cursors?: import("phaser").Types.Input.Keyboard.CursorKeys;
+        cursors: import("phaser").Types.Input.Keyboard.CursorKeys | undefined;
         wasd?: Record<string, import("phaser").Input.Keyboard.Key>;
         lastJump = false;
         checkpoint = 65;
@@ -50,7 +50,7 @@ export function Platformer({ account, balance }: { account: { id: string; userna
             const canvas = document.createElement("canvas"); const ctx = canvas.getContext("2d");
             if (!ctx) return 0;
             ctx.fillStyle = colors.getPropertyValue(name).trim(); ctx.fillRect(0,0,1,1);
-            const p = ctx.getImageData(0,0,1,1).data; return (p[0] << 16) | (p[1] << 8) | p[2];
+            const p = ctx.getImageData(0,0,1,1).data; return ((p[0] ?? 0) << 16) | ((p[1] ?? 0) << 8) | (p[2] ?? 0);
           };
           const green = pixelColor("--mod"), dark = pixelColor("--panel"), gold = pixelColor("--coin"), light = pixelColor("--foreground"), coral = pixelColor("--vip");
           const art = this.make.graphics({ x: 0, y: 0 });
@@ -91,7 +91,7 @@ export function Platformer({ account, balance }: { account: { id: string; userna
           if(import.meta.env.DEV) (window as unknown as { __platformer: unknown }).__platformer = this;
         }
         respawn() { this.player?.setPosition(this.checkpoint,360); this.player?.setVelocity(0,0); }
-        update() {
+        override update() {
           const p=this.player; if(!p) return;
           const body=p.body as import("phaser").Physics.Arcade.Body;
           const input=controls.current, tuning=movement(levels.current.speed,levels.current.jump);
