@@ -678,6 +678,14 @@ export type Database = {
         Args: { _offset?: number; _target: string; _token: string }
         Returns: Json
       }
+      list_device_bans: {
+        Args: { _token: string }
+        Returns: {
+          device_id: string
+          id: string
+          reason: string
+        }[]
+      }
       login_user: {
         Args: { _password: string; _username: string }
         Returns: {

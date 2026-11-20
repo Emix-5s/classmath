@@ -148,6 +148,13 @@
       "when": 1794321346693,
       "tag": "0020_member_inspector_platformer",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795210734293,
+      "tag": "0021_lock_down_staff_and_profile_access",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { clubToken } from "@/lib/club-session";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -276,10 +277,9 @@ function Clubhouse() {
     queryKey: ["device-bans"],
     enabled: lvl >= 4,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("device_bans")
-        .select("id, device_id, reason")
-        .order("created_at", { ascending: false });
+      const token = user ? clubToken(user.id) : null;
+      if (!token) return [];
+      const { data, error } = await supabase.rpc("list_device_bans", { _token: token });
       if (error) throw error;
       return data ?? [];
     },
