@@ -1,5 +1,4 @@
-/// <reference types="bun" />
-import { test, expect } from "bun:test";
+import { test, expect } from "vitest";
 import { COINS_PER_RUN, upgradeCost, movement, coinPosition } from "./platformer-rules";
 
 test("platformer awards a thirty-coin course", () => {
