@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/club-client";
 
 export function clubToken(userId: string) {
   return sessionStorage.getItem(`club-session:${userId}`);
@@ -9,5 +9,6 @@ export async function verifyClubAccount(username: string, password: string, user
   if (error) throw error;
   if (!data) throw new Error("Sign in failed");
   sessionStorage.setItem(`club-session:${userId}`, data);
+  sessionStorage.setItem("club-active-token", data);
   return data;
 }

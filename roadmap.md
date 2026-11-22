@@ -1,4 +1,4 @@
 # Current work
-- [x] TON 618 member history menu with verified access and member details.
-- [x] Platformer with collected coins credited to the main wallet and persistent upgrades.
-- [x] Verify permissions, purchases, gameplay, and layouts.
+- [ ] Secure account reads, chat, rewards, and staff powers with verified sessions.
+- [ ] Consolidate ranks into Member, Moderator, Admin, and Owner.
+- [ ] Verify access boundaries and signed-in workflows; update security findings.

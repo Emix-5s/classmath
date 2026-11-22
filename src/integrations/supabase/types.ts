@@ -569,18 +569,21 @@ export type Database = {
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          role_key: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
+          role_key?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          role_key?: string
           user_id?: string
         }
         Relationships: []
@@ -608,6 +611,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_club_staff: {
+        Args: { _actor: string; _minimum: number; _target: string }
+        Returns: undefined
+      }
+      assert_club_user: { Args: { _user: string }; Returns: undefined }
       bump_progress: {
         Args: { _amount: number; _key: string; _user: string }
         Returns: undefined
@@ -619,6 +627,7 @@ export type Database = {
       }
       claim_daily: { Args: { _user: string }; Returns: Json }
       claim_mod: { Args: { _code: string; _user: string }; Returns: undefined }
+      club_request_user: { Args: never; Returns: string }
       create_guest: {
         Args: { _username: string }
         Returns: {
@@ -645,6 +654,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      current_club_rank: { Args: never; Returns: number }
       delete_message: {
         Args: { _actor: string; _message: string }
         Returns: undefined

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, activeClubToken } from "@/lib/club-client";
+import { verifyClubAccount } from "@/lib/club-session";
 
 export type Account = { id: string; username: string };
 
@@ -12,7 +13,7 @@ export function useAccount() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY) ?? localStorage.getItem("nexus-guest");
-      if (raw) setAccount(JSON.parse(raw) as Account);
+      if (raw && activeClubToken()) setAccount(JSON.parse(raw) as Account);
     } catch {
       /* ignore */
     }
@@ -33,6 +34,8 @@ export function useAccount() {
         _password: password,
       });
       if (error) throw error;
+      const row = data as unknown as Account;
+      await verifyClubAccount(row.username, password, row.id);
       return persist(data as unknown as Account);
     },
     [persist],
@@ -45,6 +48,8 @@ export function useAccount() {
         _password: password,
       });
       if (error) throw error;
+      const row = data as unknown as Account;
+      await verifyClubAccount(row.username, password, row.id);
       return persist(data as unknown as Account);
     },
     [persist],
@@ -53,8 +58,10 @@ export function useAccount() {
   const signOut = useCallback(() => {
     localStorage.removeItem(KEY);
     localStorage.removeItem("nexus-guest");
+    sessionStorage.removeItem("club-active-token");
+    if (account) sessionStorage.removeItem(`club-session:${account.id}`);
     setAccount(null);
-  }, []);
+  }, [account]);
 
   return { account, loading, signUp, signIn, signOut };
 }

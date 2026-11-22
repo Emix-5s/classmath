@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, ArrowUp, RotateCcw, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/club-client";
 import { clubToken } from "@/lib/club-session";
 import { VerifiedAccess } from "./VerifiedAccess";
 import { coinPosition, COINS_PER_RUN, movement, upgradeCost } from "@/lib/platformer-rules";

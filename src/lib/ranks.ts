@@ -1,50 +1,17 @@
-export const RANK_LEVEL: Record<string, number> = {
-  ton618: 7,
-  von: 6,
-  coverstar: 5,
-  owner: 4,
-  co_owner: 3,
-  admin: 3,
-  super_mod: 2,
-  mod: 1,
-  user: 0,
-};
+export const RANK_LEVEL: Record<string, number> = { user: 0, mod: 1, admin: 2, owner: 3 };
 
 export type RankInfo = { label: string; short: string; className: string };
 
 export const RANKS: Record<number, RankInfo> = {
-  7: {
-    label: "TON 618",
-    short: "TON 618",
-    className:
-      "bg-gradient-to-r from-fuchsia-500/25 to-indigo-500/25 text-fuchsia-200 ring-1 ring-fuchsia-300/50",
-  },
-  6: {
-    label: "clyilo",
-    short: "CLYILO",
-    className:
-      "bg-gradient-to-r from-pink-500/25 to-cyan-400/20 text-pink-200 ring-1 ring-pink-300/50",
-  },
-  5: {
-    label: "COVERST4R",
-    short: "COVERST4R",
-    className:
-      "bg-gradient-to-r from-rose-500/20 to-amber-400/20 text-rose-200 ring-1 ring-rose-300/50",
-  },
-  4: {
+  3: {
     label: "Owner",
     short: "OWNER",
-    className: "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/40",
-  },
-  3: {
-    label: "Co-Owner",
-    short: "CO-OWNER",
-    className: "bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/40",
+    className: "bg-vip/15 text-vip ring-1 ring-vip/30",
   },
   2: {
-    label: "Super Mod",
-    short: "SUPER MOD",
-    className: "bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/40",
+    label: "Admin",
+    short: "ADMIN",
+    className: "bg-accent/15 text-accent ring-1 ring-accent/30",
   },
   1: {
     label: "Moderator",
@@ -62,11 +29,7 @@ export function rankLabel(level: number): string {
 }
 
 export const GRANT_CAP: Record<number, number> = {
-  1: 100000,
-  2: 500000,
-  3: 10000000,
-  4: 2000000000,
-  5: 2000000000,
-  6: 2000000000,
-  7: 2000000000,
+  1: 0,
+  2: 10000000,
+  3: 2000000000,
 };

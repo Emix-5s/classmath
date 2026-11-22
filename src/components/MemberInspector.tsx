@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/club-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VerifiedAccess } from "./VerifiedAccess";
@@ -29,7 +29,7 @@ export function MemberInspector({ account }: { account: { id: string; username: 
   return <>
     <Button onClick={() => setOpen(true)} variant="secondary" className="mb-3 w-full"><Users /> Member records</Button>
     <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[90dvh] w-[calc(100%-24px)] max-w-3xl overflow-y-auto">
-      <DialogTitle>TON 618 · Member records</DialogTitle>
+      <DialogTitle>Owner · Member records</DialogTitle>
       <DialogDescription>Account details and available message history.</DialogDescription>
       {!token ? <VerifiedAccess account={account} onVerified={setToken} /> : <div className="space-y-4">
         <label className="flex items-center gap-2 rounded-md border border-input px-3"><Search className="size-4" /><input aria-label="Search members" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search username" className="min-w-0 flex-1 bg-transparent py-2 outline-none" /></label>
